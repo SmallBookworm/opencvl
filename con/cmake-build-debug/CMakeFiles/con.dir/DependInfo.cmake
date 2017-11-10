@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/home/peng/文档/clionproject/con/main.cpp" "/home/peng/文档/clionproject/con/cmake-build-debug/CMakeFiles/con.dir/main.cpp.o"
+  "/home/peng/文档/clionproject/opencv/con/main.cpp" "/home/peng/文档/clionproject/opencv/con/cmake-build-debug/CMakeFiles/con.dir/main.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
