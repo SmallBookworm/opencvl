@@ -1,3 +1,0 @@
-/home/peng/文档/clionproject/captureparameter/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/peng/文档/clionproject/captureparameter/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/peng/文档/clionproject/captureparameter/cmake-build-debug/CMakeFiles/captureparameter.dir
