@@ -3,6 +3,7 @@
 #include <opencv/cv.hpp>
 
 using namespace cv;
+using namespace std;
 
 Vec4f getEdgeCircle(std::vector<Point> contour);
 
@@ -12,7 +13,7 @@ get_foreground_object(Ptr<BackgroundSubtractorMOG2> pBackgroundKnn, Mat scene, d
 int main() {
 
     VideoCapture capture;
-    capture.open("/home/peng/下载/blur.mp4");
+    capture.open("/home/peng/下载/机器学习视频/IMG_2382.MOV");
 
     Mat srcImage;
     if (!capture.isOpened()) {
@@ -22,6 +23,7 @@ int main() {
 
     Ptr<BackgroundSubtractorMOG2> pBackgroundKnn = createBackgroundSubtractorMOG2();
     long nCount = 0;
+    std::vector<std::vector<Point2f>> data;
     while (capture.isOpened()) {
         capture >> srcImage;
         nCount++;
@@ -53,28 +55,33 @@ int main() {
 
         std::vector<RotatedRect> regions = get_foreground_object(pBackgroundKnn, srcImage, 1, true);
         for (int i = 0; i < regions.size(); ++i) {
-            if (regions[i].size.area() < 200 || regions[i].size.area() > 700)
-                continue;
-            if (nCount < 150 && (regions[i].center.x > 200 || regions[i].center.y < 170))
-                continue;
-            if (nCount > 150 && (regions[i].center.y > 170 || regions[i].center.y < 120))
+            if (regions[i].size.area() < 1000 || regions[i].size.area() > 7000 || regions[i].center.x > 1700)
                 continue;
             Point2f points[4];
             regions[i].points(points);
-            Point2f maxP[2] = {Point2f(0, 0), Point2f(0, 0)};
+            Point2f maxP[2] = {Point2f(99999, 99999), Point2f(99999, 99999)};
+            std::vector<Point2f> rsPoints;
+            data.push_back(rsPoints);
             for (int j = 0; j < 4; ++j) {
-                line(resultImage, points[j], points[(j + 1) % 4], Scalar(0, 255, 0), 3, 8);
-                if (points[j].x > maxP[0].x){
-                        maxP[1]=maxP[0];
+                line(resultImage, points[j], points[(j + 1) % 4], Scalar(0, 255, regions[i].center.y), 3, 8);
+                if (points[j].x < maxP[0].x) {
+                    maxP[1] = maxP[0];
                     maxP[0] = points[j];
-                }
-                else if (points[j].x > maxP[1].x)
+                } else if (points[j].x < maxP[1].x)
                     maxP[1] = points[j];
             }
-            std::cout << regions[i].center << std::endl;
+            Point2f cen = (maxP[0] + maxP[1]) / 2;
+            circle(resultImage, cen, 4, Scalar(255, 0, 0), CV_FILLED);
+            std::cout << cen << std::endl;
+            rsPoints.push_back(cen);
         }
         std::cout << nCount << std::endl;
+//        if (nCount == 143)
+//            imshow("12", resultImage);
+        namedWindow("resultImage",CV_WINDOW_NORMAL);
+        resizeWindow("resultImage",1080,720);
         imshow("resultImage", resultImage);
+
 //        std::vector<std::vector<Point>> contours;
 //        std::vector<Vec4i> hierarchy;
 //        findContours(redTempMat, contours, hierarchy,
@@ -110,10 +117,18 @@ int main() {
             break;
         }
     }
+    waitKey(0);
     capture.release();
     return 0;
 }
 
+std::vector<Point2f> getContinuePoints(vector<std::vector<Point2f>> points,int continueFrames,int promise,int minFrames){
+    std::vector<Point2f> result;
+}
+
+vector<int[2]> getCloseNumber(vector<Point2f> p1,vector<Point2f>p2){
+
+}
 Vec4f getEdgeCircle(std::vector<Point> contour) {
     Vec4f circle;
     Point2f center;
@@ -153,14 +168,14 @@ std::vector<RotatedRect> get_foreground_object(
     medianBlur(fgmask, fgmask, 5);
 
     morphologyEx(fgmask, fgmask, MORPH_CLOSE, Mat::ones(15, 3, CV_8UC1));
-    imshow("MORPH_CLOSE", fgmask);
+//    imshow("MORPH_CLOSE", fgmask);
     std::vector<std::vector<Point>> region_contours;
     findContours(fgmask, region_contours, CV_RETR_EXTERNAL,
                  CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
     std::vector<RotatedRect> objects;
     for (size_t i = 0; i != region_contours.size(); ++i) {
-            RotatedRect rect = minAreaRect(region_contours[i]);
-            objects.push_back(rect);
+        RotatedRect rect = minAreaRect(region_contours[i]);
+        objects.push_back(rect);
 
 
 

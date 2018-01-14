@@ -9,9 +9,9 @@ int main() {
     ofstream fout("/home/peng/下载/caliberation_result.txt");  /* 保存标定结果的文件 */
     //读取每一幅图像，从中提取出角点，然后对角点进行亚像素精确化
     cout << "开始提取角点………………";
-    int image_count = 0;  /* 图像数量 */
+    unsigned long image_count = 0;  /* 图像数量 */
     Size image_size;  /* 图像的尺寸 */
-    Size board_size = Size(11, 8);    /* 标定板上每行、列的角点数 */
+    Size board_size = Size(11, 9);    /* 标定板上每行、列的角点数 */
     vector<Point2f> image_points_buf;  /* 缓存每幅图像上检测到的角点 */
     vector<vector<Point2f>> image_points_seq; /* 保存检测到的所有角点 */
     string filename;
@@ -21,7 +21,7 @@ int main() {
         // 用于观察检验输出
         cout << "image_count = " << image_count << endl;
         /* 输出检验*/
-        cout << "-->count = " << count;
+        cout << "-->count = " << count<<endl;
         Mat imageInput = imread(filename);
         if (image_count == 1)  //读入第一张图片时获取图像宽高信息
         {
@@ -34,7 +34,8 @@ int main() {
         /* 提取角点 */
         if (0 == findChessboardCorners(imageInput, board_size, image_points_buf)) {
             cout << "can not find chessboard corners!\n"; //找不到角点
-            exit(1);
+            //exit(1);
+            continue;
         } else {
             Mat view_gray;
             cvtColor(imageInput, view_gray, CV_RGB2GRAY);
@@ -44,14 +45,16 @@ int main() {
             image_points_seq.push_back(image_points_buf);  //保存亚像素角点
             /* 在图像上显示角点位置 */
             drawChessboardCorners(view_gray, board_size, image_points_buf, false); //用于在图片中标记角点
-            imshow("Camera Calibration", view_gray);//显示图片
+            stringstream ss;
+            ss<<image_count;
+            imshow("Camera Calibration"+ss.str(), view_gray);//显示图片
             waitKey(500);//暂停0.5S
         }
     }
-    unsigned long total = image_points_seq.size();
-    cout << "total = " << total << endl;
+    image_count = image_points_seq.size();
+    cout << "total = " << image_count << endl;
     int CornerNum = board_size.width * board_size.height;  //每张图片上总的角点数
-    for (int ii = 0; ii < total; ii++) {
+    for (int ii = 0; ii < image_count; ii++) {
 
         cout << "--> 第 " << ii << "图片的数据 --> : " << endl;
 
@@ -150,9 +153,16 @@ int main() {
     Mat mapx = Mat(image_size, CV_32FC1);
     Mat mapy = Mat(image_size, CV_32FC1);
     Mat R = Mat::eye(3, 3, CV_32F);
-    initUndistortRectifyMap(cameraMatrix, distCoeffs, R, cameraMatrix, image_size, CV_32FC1, mapx, mapy);
+    distCoeffs=(Mat_<double>(1,5) << 1290.08,3.293750,-0.0246557,0.0243806,4.47976);
+    //cameraMatrix=(Mat_<float>(3,3) << 205.35457,0,981.382,0,205.56265,453.401,0,0,1);
+    cameraMatrix=(Mat_<float>(3,3) <<2073.5006365931, 0, 986.423,
+    0, 2075.9638554216, 451.401,
+    0, 0, 1);
+    cout << cameraMatrix  << endl;
+    initUndistortRectifyMap(cameraMatrix,
+                            distCoeffs, R, cameraMatrix, image_size, CV_32FC1, mapx, mapy);
     std::cout << "矫正图像" << endl;
-    Mat imageSource = imread("/home/peng/下载/biao.jpeg");
+    Mat imageSource = imread("/home/peng/下载/棋盘/棋盘2.jpg");
     Mat newimage = imageSource.clone();
     remap(imageSource, newimage, mapx, mapy, INTER_LINEAR);
     imshow("finish",newimage);
