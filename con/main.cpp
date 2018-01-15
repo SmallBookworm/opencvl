@@ -78,9 +78,9 @@ int main() {
         std::cout << nCount << std::endl;
 //        if (nCount == 143)
 //            imshow("12", resultImage);
-        namedWindow("resultImage",CV_WINDOW_NORMAL);
-        resizeWindow("resultImage",1080,720);
-        imshow("resultImage", resultImage);
+//        namedWindow("resultImage",CV_WINDOW_NORMAL);
+//        resizeWindow("resultImage",1080,720);
+//        imshow("resultImage", resultImage);
 
 //        std::vector<std::vector<Point>> contours;
 //        std::vector<Vec4i> hierarchy;
@@ -168,7 +168,9 @@ std::vector<RotatedRect> get_foreground_object(
     medianBlur(fgmask, fgmask, 5);
 
     morphologyEx(fgmask, fgmask, MORPH_CLOSE, Mat::ones(15, 3, CV_8UC1));
-//    imshow("MORPH_CLOSE", fgmask);
+    namedWindow("MORPH_CLOSE",CV_WINDOW_NORMAL);
+    resizeWindow("MORPH_CLOSE",1080,720);
+    imshow("MORPH_CLOSE", fgmask);
     std::vector<std::vector<Point>> region_contours;
     findContours(fgmask, region_contours, CV_RETR_EXTERNAL,
                  CV_CHAIN_APPROX_SIMPLE, Point(0, 0));

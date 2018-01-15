@@ -9,7 +9,7 @@ int main() {
     Rect2d roi;
     Mat frame;
     // create a tracker object
-    Ptr<Tracker> tracker = TrackerKCF::create();
+    Ptr<Tracker> tracker = TrackerTLD::create();
     // set input video
     VideoCapture cap("/home/peng/下载/机器学习视频/IMG_2382.MOV");
     if (!cap.isOpened()) {
@@ -17,18 +17,23 @@ int main() {
         return -1;
     }
     // get bounding box
+    int num=0;
     while (cap.isOpened()){
         cap >> frame;
-        namedWindow("tracker", CV_WINDOW_NORMAL);
-        resizeWindow("tracker", 1080, 720);
-        imshow("tracker", frame);
-        if (waitKey(1) == 27){
-            roi = selectROI("tracker", frame);
-            //quit if ROI was not selected
-            if (roi.width == 0 || roi.height == 0)
-                return 0;
-            else
-                break;
+        num++;
+        //ignore unimportant frames
+        if (num>100){
+            namedWindow("tracker", CV_WINDOW_NORMAL);
+            resizeWindow("tracker", 1080, 720);
+            imshow("tracker", frame);
+            if (waitKey(50) == 27){
+                roi = selectROI("tracker", frame);
+                //quit if ROI was not selected
+                if (roi.width == 0 || roi.height == 0)
+                    return 0;
+                else
+                    break;
+            }
         }
     }
 
