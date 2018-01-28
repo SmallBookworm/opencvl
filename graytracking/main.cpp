@@ -32,6 +32,9 @@ int main() {
     while (cap.isOpened()) {
         cap >> frame;
         num++;
+        // stop the program if no more images
+        if (frame.rows == 0 || frame.cols == 0)
+            break;
         //ignore unimportant frames
         if (num > 20) {
             Mat nframe = get_foreground_object(pBackgroundKnn, frame, 1);

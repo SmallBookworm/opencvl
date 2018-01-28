@@ -21,6 +21,9 @@ int main() {
     while (cap.isOpened()){
         cap >> frame;
         num++;
+        // stop the program if no more images
+        if (frame.rows == 0 || frame.cols == 0)
+            break;
         //ignore unimportant frames
         if (num>100){
             namedWindow("tracker", CV_WINDOW_NORMAL);
