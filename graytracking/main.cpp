@@ -14,18 +14,31 @@ vector<RotatedRect> trackingObjectR2(Mat frame, Rect2d rect, double maxD, double
 
 RotatedRect bestRect(vector<RotatedRect> rects, double x, double y);
 
+Point2f getLeftCenter(Point2f points[4]) {
+    Point2f minP[2] = {Point2f(99999, 99999), Point2f(99999, 99999)};;
+    for (int i = 0; i < 4; ++i) {
+        if (points[i].x < minP[0].x) {
+            minP[1] = minP[0];
+            minP[0] = points[i];
+        } else if (points[i].x < minP[1].x)
+            minP[1] = points[i];
+    }
+    return (minP[0] + minP[1]) / 2;
+}
+
 int main() {
     // declares all required variables
     Rect2d roi;
     Mat frame;
     // set input video
-    VideoCapture cap("/home/peng/下载/机器学习视频/IMG_2399.MOV");
+    string a = "51";
+    VideoCapture cap("/home/peng/下载/数据1/" + a + ".MOV");
     if (!cap.isOpened()) {
         std::cout << "fail to open video!" << std::endl;
         return -1;
     }
     ofstream ofile;
-    ofile.open("/home/peng/下载/机器学习视频/res/IMG_2399");
+    ofile.open("/home/peng/下载/数据1/res/" + a);
     // get bounding box
     Ptr<BackgroundSubtractorMOG2> pBackgroundKnn = createBackgroundSubtractorMOG2();
     int num = 0;
@@ -36,7 +49,7 @@ int main() {
         if (frame.rows == 0 || frame.cols == 0)
             break;
         //ignore unimportant frames
-        if (num > 20) {
+        if (num > 0) {
             Mat nframe = get_foreground_object(pBackgroundKnn, frame, 1);
             namedWindow("tracker", CV_WINDOW_NORMAL);
             resizeWindow("tracker", 1080, 720);
@@ -51,13 +64,17 @@ int main() {
             }
         }
     }
+    cout<<roi.area()<<endl;
     vector<RotatedRect> rects;
     // perform the tracking process
     printf("Start the tracking process, press ESC to quit.\n");
     cout << num << endl;
     ofile << num << endl;
     cout << roi.tl() << endl;
-    ofile << roi.tl() << endl;
+    Point2f po(0, static_cast<float>(roi.height / 2));
+    Point2f pr = po + Point2f(roi.tl().x, roi.tl().y);
+    cout << pr << endl;
+    ofile << pr << endl;
     while (cap.isOpened()) {
         // get frame from the video
         cap >> frame;
@@ -89,7 +106,8 @@ int main() {
                 line(frame, points[j], points[(j + 1) % 4], Scalar(0, 0, 255), 3, 8);
             }
             cout << frect.center << endl;
-            ofile << frect.center << endl;
+            cout << getLeftCenter(points) << endl;
+            ofile << getLeftCenter(points) << endl;
             // show image with the tracked object
             imshow("tracker", frame);
         }
