@@ -16,17 +16,17 @@
 using namespace std;
 using namespace cv;
 
-enum Processor { cl, gl, cpu };
+enum Processor {
+    cl, gl, cpu
+};
 
 bool protonect_shutdown = false; // Whether the running application should shut down.
 
-void sigint_handler(int s)
-{
+void sigint_handler(int s) {
     protonect_shutdown = true;
 }
 
-int main()
-{
+int main() {
     std::cout << "Hello World!" << std::endl;
 
     //! [context]
@@ -36,8 +36,7 @@ int main()
     //! [context]
 
     //! [discovery]
-    if(freenect2.enumerateDevices() == 0)
-    {
+    if (freenect2.enumerateDevices() == 0) {
         std::cout << "no device connected!" << std::endl;
         return -1;
     }
@@ -49,30 +48,28 @@ int main()
 
     int depthProcessor = Processor::cl;
 
-    if(depthProcessor == Processor::cpu)
-    {
-        if(!pipeline)
+    if (depthProcessor == Processor::cpu) {
+        if (!pipeline)
             //! [pipeline]
             pipeline = new libfreenect2::CpuPacketPipeline();
         //! [pipeline]
     } else if (depthProcessor == Processor::gl) {
 #ifdef LIBFREENECT2_WITH_OPENGL_SUPPORT
-        if(!pipeline)
+        if (!pipeline)
             pipeline = new libfreenect2::OpenGLPacketPipeline();
 #else
         std::cout << "OpenGL pipeline is not supported!" << std::endl;
 #endif
     } else if (depthProcessor == Processor::cl) {
 #ifdef LIBFREENECT2_WITH_OPENCL_SUPPORT
-        if(!pipeline)
+        if (!pipeline)
             pipeline = new libfreenect2::OpenCLPacketPipeline();
 #else
         std::cout << "OpenCL pipeline is not supported!" << std::endl;
 #endif
     }
 
-    if(pipeline)
-    {
+    if (pipeline) {
         //! [open]
         dev = freenect2.openDevice(serial, pipeline);
         //! [open]
@@ -80,8 +77,7 @@ int main()
         dev = freenect2.openDevice(serial);
     }
 
-    if(dev == 0)
-    {
+    if (dev == 0) {
         std::cout << "failure opening device!" << std::endl;
         return -1;
     }
@@ -107,15 +103,17 @@ int main()
     //! [start]
 
     //! [registration setup]
-    libfreenect2::Registration* registration = new libfreenect2::Registration(dev->getIrCameraParams(), dev->getColorCameraParams());
-    libfreenect2::Frame undistorted(512, 424, 4), registered(512, 424, 4), depth2rgb(1920, 1080 + 2, 4); // check here (https://github.com/OpenKinect/libfreenect2/issues/337) and here (https://github.com/OpenKinect/libfreenect2/issues/464) why depth2rgb image should be bigger
+    libfreenect2::Registration *registration = new libfreenect2::Registration(dev->getIrCameraParams(),
+                                                                              dev->getColorCameraParams());
+    libfreenect2::Frame undistorted(512, 424, 4), registered(512, 424, 4), depth2rgb(1920, 1080 + 2,
+                                                                                     4); // check here (https://github.com/OpenKinect/libfreenect2/issues/337) and here (https://github.com/OpenKinect/libfreenect2/issues/464) why depth2rgb image should be bigger
     //! [registration setup]
 
     Mat rgbmat, depthmat, depthmatUndistorted, irmat, rgbd, rgbd2;
-
+    //open writer
+    VideoWriter videoWriter;
     //! [loop start]
-    while(!protonect_shutdown)
-    {
+    while (!protonect_shutdown) {
         listener.waitForNewFrame(frames);
         libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
         libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
@@ -126,8 +124,8 @@ int main()
         cv::Mat(ir->height, ir->width, CV_32FC1, ir->data).copyTo(irmat);
         cv::Mat(depth->height, depth->width, CV_32FC1, depth->data).copyTo(depthmat);
 
-        cv::imshow("rgb", rgbmat);
-        cv::imshow("ir", irmat / 4500.0f);
+//        cv::imshow("rgb", rgbmat);
+//        cv::imshow("ir", irmat / 4500.0f);
         cv::imshow("depth", depthmat / 4500.0f);
 
         //! [registration]
@@ -135,13 +133,23 @@ int main()
         //! [registration]
 
         cv::Mat(undistorted.height, undistorted.width, CV_32FC1, undistorted.data).copyTo(depthmatUndistorted);
-        cv::Mat(registered.height, registered.width, CV_8UC4, registered.data).copyTo(rgbd);
-        cv::Mat(depth2rgb.height, depth2rgb.width, CV_32FC1, depth2rgb.data).copyTo(rgbd2);
+//        cv::Mat(registered.height, registered.width, CV_8UC4, registered.data).copyTo(rgbd);
+//        cv::Mat(depth2rgb.height, depth2rgb.width, CV_32FC1, depth2rgb.data).copyTo(rgbd2);
 
-
+        if (!videoWriter.isOpened()) {
+            videoWriter.open(
+                    "/home/peng/下载/lf.avi",
+                    CV_FOURCC('M','J','P','G'),
+                    30,
+                    Size(512, 424),
+                    false
+            );
+        }
+        imwrite("/home/peng/下载/lf.jpg", depthmatUndistorted);
+        videoWriter << depthmatUndistorted;
         cv::imshow("undistorted", depthmatUndistorted / 4500.0f);
-        cv::imshow("registered", rgbd);
-        cv::imshow("depth2RGB", rgbd2 / 4500.0f);
+//        cv::imshow("registered", rgbd);
+//        cv::imshow("depth2RGB", rgbd2 / 4500.0f);
 
         int key = cv::waitKey(1);
         protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
@@ -158,6 +166,6 @@ int main()
 
     delete registration;
 
-    std::cout << "Goodbye World!" << std::endl;
+    std::cout << "Fuxk World!" << std::endl;
     return 0;
 }
