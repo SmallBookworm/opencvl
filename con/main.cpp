@@ -90,11 +90,11 @@ int main() {
 //        Vec4f minC;
 //        for (int i = 0; i < contours.size(); ++i) {
 //            if (contours[i].size() < 3)
-//                break;
+//                continue;
 //            Scalar color = Scalar(0, 0, 255);
 //            Vec4f circle = getEdgeCircle(contours[i]);
 //            if (circle[2] < 10)
-//                break;
+//                continue;
 //            if (minI == -1) {
 //                minC = circle;
 //                minI = i;

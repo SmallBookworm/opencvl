@@ -9,14 +9,37 @@
 #include <iostream>
 #include <zconf.h>
 #include <future>
+#include <opencv2/opencv.hpp>
+
 
 // move-constructible function object (i.e., an object whose class defines operator(), including closures and function objects).
+
 class Tracker {
 public:
+    Tracker();
+
     //define operator()
-    void  operator()(std::future<int>& fut);
+    void operator()(std::future<int> &fut);
+
+    void test();
+
 private:
-    void outp(int i);
+    std::vector<cv::Point2f> ballCoordinates;
+    cv::Vec4f ring;
+
+    int isPassed(cv::Mat &frame);
+
+    std::vector<std::vector<cv::Point>> findAllContours(cv::Mat &input);
+
+    std::vector<std::vector<cv::Point>> findForegroundContours(
+            const cv::Ptr<cv::BackgroundSubtractorMOG2> &pBackgroundKnn,
+            cv::Mat scene, double scale);
+
+    cv::Vec4f getEdgeCircle(std::vector<cv::Point> contour);
+
+    std::vector<cv::RotatedRect> getRotatedRect(std::vector<std::vector<cv::Point>>);
+
+    cv::Vec4f getBall(std::vector<std::vector<cv::Point>> contours, cv::Mat &result);
 };
 
 #endif //DEPTHTRACK_BALL_TRACKER_H

@@ -4,17 +4,17 @@
 #include "ball_tracker.h"
 
 using namespace std;
-
+using namespace cv;
 
 int main() {
-    getchar();
     promise<int> prom;
     future<int> fut = prom.get_future();
     Tracker tracker;
-    thread thread1(tracker, ref(fut));
-    thread1.detach();
-    getchar();
+//    thread thread1(tracker, ref(fut));
+//    thread1.detach();
+    tracker.test();
+    waitKey(0);
     prom.set_value(10);
-    getchar();
+    waitKey(0);
     return 0;
 }

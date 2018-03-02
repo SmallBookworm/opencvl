@@ -111,7 +111,8 @@ int main() {
 
     Mat rgbmat, depthmat, depthmatUndistorted, irmat, rgbd, rgbd2;
     //open writer
-    VideoWriter videoWriter;
+    VideoWriter videoWriter, videoWriter0, videoWriter1, videoWriter2;
+
     //! [loop start]
     while (!protonect_shutdown) {
         listener.waitForNewFrame(frames);
@@ -124,32 +125,71 @@ int main() {
         cv::Mat(ir->height, ir->width, CV_32FC1, ir->data).copyTo(irmat);
         cv::Mat(depth->height, depth->width, CV_32FC1, depth->data).copyTo(depthmat);
 
-//        cv::imshow("rgb", rgbmat);
-//        cv::imshow("ir", irmat / 4500.0f);
-        cv::imshow("depth", depthmat / 4500.0f);
+        if (!videoWriter0.isOpened()) {
+            videoWriter0.open(
+                    "/home/peng/下载/test/0.avi",
+                    CV_FOURCC('M', 'J', 'P', 'G'),
+                    30,
+                    Size(depth->width, depth->height),
+                    true
+            );
+        }
+        Mat df(depthmat.rows, depthmat.cols, CV_32FC3, Scalar(0, 0, 0));
+        vector<Mat> cg;
+        vector<Mat> channels;
+        split(depthmat, channels);
+        cg.push_back(channels.at(0));
+        cg.push_back(Mat(depthmat.rows, depthmat.cols, CV_32FC1, Scalar(0.0)));
+        cg.push_back(Mat(depthmat.rows, depthmat.cols, CV_32FC1, Scalar(0.0)));
+        merge(cg, df);
+        videoWriter0 << df;
+
+        if (!videoWriter1.isOpened()) {
+            videoWriter1.open(
+                    "/home/peng/下载/test/ir0.avi",
+                    CV_FOURCC('M', 'J', 'P', 'G'),
+                    30,
+                    Size(depth->width, depth->height),
+                    true
+            );
+        }
+        videoWriter1 << irmat;
+        //show normal in opencv
+        cv::imshow("depth", df / 4500.0f);
+        cv::imshow("ir", irmat / 4500.0f);
+        cv::imshow("rgb", rgbmat);
 
         //! [registration]
         registration->apply(rgb, depth, &undistorted, &registered, true, &depth2rgb);
         //! [registration]
 
         cv::Mat(undistorted.height, undistorted.width, CV_32FC1, undistorted.data).copyTo(depthmatUndistorted);
-//        cv::Mat(registered.height, registered.width, CV_8UC4, registered.data).copyTo(rgbd);
-//        cv::Mat(depth2rgb.height, depth2rgb.width, CV_32FC1, depth2rgb.data).copyTo(rgbd2);
+        cv::Mat(registered.height, registered.width, CV_8UC4, registered.data).copyTo(rgbd);
+        cv::Mat(depth2rgb.height, depth2rgb.width, CV_32FC1, depth2rgb.data).copyTo(rgbd2);
 
         if (!videoWriter.isOpened()) {
             videoWriter.open(
-                    "/home/peng/下载/lf.avi",
-                    CV_FOURCC('M','J','P','G'),
+                    "/home/peng/下载/rgbd0.avi",
+                    CV_FOURCC('M', 'J', 'P', 'G'),
                     30,
                     Size(512, 424),
-                    false
+                    true
             );
         }
-        imwrite("/home/peng/下载/lf.jpg", depthmatUndistorted);
-        videoWriter << depthmatUndistorted;
-        cv::imshow("undistorted", depthmatUndistorted / 4500.0f);
-//        cv::imshow("registered", rgbd);
-//        cv::imshow("depth2RGB", rgbd2 / 4500.0f);
+        videoWriter << rgbd;
+        if (!videoWriter2.isOpened()) {
+            videoWriter2.open(
+                    "/home/peng/下载/test/ir0.avi",
+                    CV_FOURCC('M', 'J', 'P', 'G'),
+                    30,
+                    Size(rgbd2.cols, rgbd2.rows),
+                    true
+            );
+        }
+        videoWriter2 << rgbd2;
+        //cv::imshow("undistorted", depthmatUndistorted / 4500.0f);
+        cv::imshow("registered", rgbd);
+        cv::imshow("depth2RGB", rgbd2 / 4500.0f);
 
         int key = cv::waitKey(1);
         protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
