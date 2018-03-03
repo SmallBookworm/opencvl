@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.8)
 
 set(CMAKE_CXX_STANDARD 11)
 
+PROJECT(lkinect)
+
 if(WIN32 AND NOT MINGW)
     if(NOT DEFINED CMAKE_DEBUG_POSTFIX)
         set(CMAKE_DEBUG_POSTFIX "d")
@@ -13,7 +15,6 @@ IF(NOT DEFINED CMAKE_BUILD_TYPE)
     SET(CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING "Choose: RelWithDebInfo Release Debug MinSizeRel None")
 ENDIF()
 
-PROJECT(lkinect)
 
 SET(MY_DIR ${libfreenect2_examples_SOURCE_DIR})
 SET(DEPENDS_DIR "${MY_DIR}/../depends" CACHE STRING "Dependency directory")
@@ -43,7 +44,7 @@ INCLUDE_DIRECTORIES(
 
 SET(Protonect_src
         Protonect.cpp
-        )
+        protonect.cpp protonect.h)
 
 SET(Protonect_LIBRARIES
         ${freenect2_LIBRARIES}
@@ -53,27 +54,6 @@ SET(Protonect_DLLS
         ${freenect2_DLLS}
         )
 
-IF(ENABLE_OPENGL)
-    FIND_PACKAGE(GLFW3)
-    FIND_PACKAGE(OpenGL)
-    IF(GLFW3_FOUND AND OPENGL_FOUND)
-        INCLUDE_DIRECTORIES(
-                ${GLFW3_INCLUDE_DIRS}
-                ${flextGL_INCLUDE_DIRS}
-        )
-
-        LIST(APPEND Protonect_DLLS ${GLFW3_DLL})
-        LIST(APPEND Protonect_src
-                viewer.cpp
-                ${flextGL_SOURCES}
-                )
-        LIST(APPEND Protonect_LIBRARIES
-                ${GLFW3_LIBRARIES}
-                ${OPENGL_gl_LIBRARY}
-                )
-        ADD_DEFINITIONS(-DEXAMPLES_WITH_OPENGL_SUPPORT=1)
-    ENDIF()
-ENDIF(ENABLE_OPENGL)
 
 ADD_EXECUTABLE(Protonect
         ${Protonect_src}

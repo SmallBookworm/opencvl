@@ -1,121 +1,51 @@
 //! [headers]
-#include <iostream>
-#include <stdio.h>
-#include <iomanip>
-#include <time.h>
-#include <signal.h>
-#include <opencv2/opencv.hpp>
+#include "protonect.h"
 
-#include <libfreenect2/libfreenect2.hpp>
-#include <libfreenect2/frame_listener_impl.h>
-#include <libfreenect2/registration.h>
-#include <libfreenect2/packet_pipeline.h>
-#include <libfreenect2/logger.h>
+
 //! [headers]
 
 using namespace std;
 using namespace cv;
 
-enum Processor {
-    cl, gl, cpu
-};
 
-bool protonect_shutdown = false; // Whether the running application should shut down.
+Mat mergeC3(Mat depthmat) {
+    Mat df(depthmat.rows, depthmat.cols, CV_32FC3, Scalar(0, 0, 0));
+    vector<Mat> cg;
+    vector<Mat> channels;
+    split(depthmat, channels);
+    cg.push_back(channels.at(0));
+    cg.push_back(Mat(depthmat.rows, depthmat.cols, CV_32FC1, Scalar(0.0)));
+    cg.push_back(Mat(depthmat.rows, depthmat.cols, CV_32FC1, Scalar(0.0)));
+    merge(cg, df);
+    return df;
+}
+
+Protonect protonect;
 
 void sigint_handler(int s) {
-    protonect_shutdown = true;
+    protonect.protonect_shutdown = true;
 }
 
 int main() {
-    std::cout << "Hello World!" << std::endl;
 
-    //! [context]
-    libfreenect2::Freenect2 freenect2;
-    libfreenect2::Freenect2Device *dev = nullptr;
-    libfreenect2::PacketPipeline *pipeline = nullptr;
-    //! [context]
-
-    //! [discovery]
-    if (freenect2.enumerateDevices() == 0) {
-        std::cout << "no device connected!" << std::endl;
+    if (protonect.connect() < 0) {
         return -1;
     }
-
-    string serial = freenect2.getDefaultDeviceSerialNumber();
-
-    std::cout << "SERIAL: " << serial << std::endl;
-    //! [discovery]
-
-    int depthProcessor = Processor::cl;
-
-    if (depthProcessor == Processor::cpu) {
-        if (!pipeline)
-            //! [pipeline]
-            pipeline = new libfreenect2::CpuPacketPipeline();
-        //! [pipeline]
-    } else if (depthProcessor == Processor::gl) {
-#ifdef LIBFREENECT2_WITH_OPENGL_SUPPORT
-        if (!pipeline)
-            pipeline = new libfreenect2::OpenGLPacketPipeline();
-#else
-        std::cout << "OpenGL pipeline is not supported!" << std::endl;
-#endif
-    } else if (depthProcessor == Processor::cl) {
-#ifdef LIBFREENECT2_WITH_OPENCL_SUPPORT
-        if (!pipeline)
-            pipeline = new libfreenect2::OpenCLPacketPipeline();
-#else
-        std::cout << "OpenCL pipeline is not supported!" << std::endl;
-#endif
-    }
-
-    if (pipeline) {
-        //! [open]
-        dev = freenect2.openDevice(serial, pipeline);
-        //! [open]
-    } else {
-        dev = freenect2.openDevice(serial);
-    }
-
-    if (dev == 0) {
-        std::cout << "failure opening device!" << std::endl;
-        return -1;
-    }
-
     signal(SIGINT, sigint_handler);
-    protonect_shutdown = false;
+    protonect.protonect_shutdown = false;
 
-    //! [listeners]
-    libfreenect2::SyncMultiFrameListener listener(libfreenect2::Frame::Color |
-                                                  libfreenect2::Frame::Depth |
-                                                  libfreenect2::Frame::Ir);
+    protonect.start();
     libfreenect2::FrameMap frames;
 
-    dev->setColorFrameListener(&listener);
-    dev->setIrAndDepthFrameListener(&listener);
-    //! [listeners]
-
-    //! [start]
-    dev->start();
-
-    std::cout << "device serial: " << dev->getSerialNumber() << std::endl;
-    std::cout << "device firmware: " << dev->getFirmwareVersion() << std::endl;
-    //! [start]
-
-    //! [registration setup]
-    libfreenect2::Registration *registration = new libfreenect2::Registration(dev->getIrCameraParams(),
-                                                                              dev->getColorCameraParams());
     libfreenect2::Frame undistorted(512, 424, 4), registered(512, 424, 4), depth2rgb(1920, 1080 + 2,
                                                                                      4); // check here (https://github.com/OpenKinect/libfreenect2/issues/337) and here (https://github.com/OpenKinect/libfreenect2/issues/464) why depth2rgb image should be bigger
-    //! [registration setup]
-
     Mat rgbmat, depthmat, depthmatUndistorted, irmat, rgbd, rgbd2;
     //open writer
     VideoWriter videoWriter, videoWriter0, videoWriter1, videoWriter2;
-
+    string videoID = "0";
     //! [loop start]
-    while (!protonect_shutdown) {
-        listener.waitForNewFrame(frames);
+    while (!protonect.protonect_shutdown) {
+        protonect.listener->waitForNewFrame(frames);
         libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
         libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
         libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
@@ -127,40 +57,34 @@ int main() {
 
         if (!videoWriter0.isOpened()) {
             videoWriter0.open(
-                    "/home/peng/下载/test/0.avi",
+                    "/home/peng/下载/test/" + videoID + ".avi",
                     CV_FOURCC('M', 'J', 'P', 'G'),
                     30,
                     Size(depth->width, depth->height),
                     true
             );
         }
-        Mat df(depthmat.rows, depthmat.cols, CV_32FC3, Scalar(0, 0, 0));
-        vector<Mat> cg;
-        vector<Mat> channels;
-        split(depthmat, channels);
-        cg.push_back(channels.at(0));
-        cg.push_back(Mat(depthmat.rows, depthmat.cols, CV_32FC1, Scalar(0.0)));
-        cg.push_back(Mat(depthmat.rows, depthmat.cols, CV_32FC1, Scalar(0.0)));
-        merge(cg, df);
+        Mat df = mergeC3(depthmat);
         videoWriter0 << df;
 
         if (!videoWriter1.isOpened()) {
             videoWriter1.open(
-                    "/home/peng/下载/test/ir0.avi",
+                    "/home/peng/下载/test/ir" + videoID + ".avi",
                     CV_FOURCC('M', 'J', 'P', 'G'),
                     30,
-                    Size(depth->width, depth->height),
+                    Size(ir->width, ir->height),
                     true
             );
         }
-        videoWriter1 << irmat;
+        Mat irdf = mergeC3(irmat);
+        videoWriter1 << irdf;
         //show normal in opencv
         cv::imshow("depth", df / 4500.0f);
         cv::imshow("ir", irmat / 4500.0f);
         cv::imshow("rgb", rgbmat);
 
         //! [registration]
-        registration->apply(rgb, depth, &undistorted, &registered, true, &depth2rgb);
+        protonect.registration->apply(rgb, depth, &undistorted, &registered, true, &depth2rgb);
         //! [registration]
 
         cv::Mat(undistorted.height, undistorted.width, CV_32FC1, undistorted.data).copyTo(depthmatUndistorted);
@@ -169,42 +93,40 @@ int main() {
 
         if (!videoWriter.isOpened()) {
             videoWriter.open(
-                    "/home/peng/下载/rgbd0.avi",
-                    CV_FOURCC('M', 'J', 'P', 'G'),
-                    30,
-                    Size(512, 424),
-                    true
-            );
-        }
-        videoWriter << rgbd;
-        if (!videoWriter2.isOpened()) {
-            videoWriter2.open(
-                    "/home/peng/下载/test/ir0.avi",
+                    "/home/peng/下载/test/rgbd2" + videoID + ".avi",
                     CV_FOURCC('M', 'J', 'P', 'G'),
                     30,
                     Size(rgbd2.cols, rgbd2.rows),
                     true
             );
         }
-        videoWriter2 << rgbd2;
-        //cv::imshow("undistorted", depthmatUndistorted / 4500.0f);
+        Mat df1 = mergeC3(rgbd2);
+        videoWriter << df1;
+
+        if (!videoWriter2.isOpened()) {
+            videoWriter2.open(
+                    "/home/peng/下载/test/rgbd" + videoID + ".avi",
+                    CV_FOURCC('M', 'J', 'P', 'G'),
+                    30,
+                    Size(rgbd.cols, rgbd.rows),
+                    true
+            );
+        }
+        videoWriter2 << rgbd;
+        cv::imshow("undistorted", depthmatUndistorted / 4500.0f);
         cv::imshow("registered", rgbd);
         cv::imshow("depth2RGB", rgbd2 / 4500.0f);
 
         int key = cv::waitKey(1);
-        protonect_shutdown = protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
+        protonect.protonect_shutdown =
+                protonect.protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
 
         //! [loop end]
-        listener.release(frames);
+        protonect.listener->release(frames);
     }
     //! [loop end]
 
-    //! [stop]
-    dev->stop();
-    dev->close();
-    //! [stop]
-
-    delete registration;
+    protonect.stop();
 
     std::cout << "Fuxk World!" << std::endl;
     return 0;
