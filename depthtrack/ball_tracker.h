@@ -24,9 +24,14 @@ public:
     void test();
 
 private:
-    std::vector<cv::Point2f> ballCoordinates;
+    int frameI;
+    //x,y,r,score
+    std::vector<cv::Vec4f> ballCoordinates;
+    //frame,points size,depth,
+    std::vector<cv::Vec3f> ballInfo;
     cv::Vec4f ring;
     cv::Ptr<cv::BackgroundSubtractorMOG2> pBackgroundKnn = cv::createBackgroundSubtractorMOG2();
+
     int isPassed(cv::Mat &frame);
 
     std::vector<std::vector<cv::Point>> findAllContours(cv::Mat &input);
@@ -39,6 +44,8 @@ private:
     std::vector<cv::RotatedRect> getRotatedRect(std::vector<std::vector<cv::Point>>);
 
     cv::Vec4f getBall(std::vector<std::vector<cv::Point>> contours, cv::Mat &result);
+
+    float getDepth(cv::Vec4f circle, cv::Mat &depthMat);
 };
 
 #endif //DEPTHTRACK_BALL_TRACKER_H

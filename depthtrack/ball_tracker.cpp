@@ -43,6 +43,7 @@ std::vector<std::vector<Point>> Tracker::findForegroundContours(
     medianBlur(fgmask, fgmask, 5);
 
     morphologyEx(fgmask, fgmask, MORPH_CLOSE, Mat::ones(15, 3, CV_8UC1));
+    //test
     namedWindow("MORPH_CLOSE", CV_WINDOW_NORMAL);
     resizeWindow("MORPH_CLOSE", 1080, 720);
     imshow("MORPH_CLOSE", fgmask);
@@ -77,70 +78,115 @@ Vec4f Tracker::getEdgeCircle(std::vector<Point> contour) {
     return circle;
 }
 
+float Tracker::getDepth(cv::Vec4f circle, cv::Mat &depthMat) {
+    Mat roi=depthMat.operator()(Rect());
+
+
+}
+
 cv::Vec4f Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage) {
     bool minI = false;
     Vec4f minC;
-    int minx, miny, max;
-
+    float cSize;
+    float minSizes, minX, minY, maxX, maxY, minR, maxR, maxC;
+    minSizes = 60;
     if (this->ballCoordinates.empty()) {
-        miny = resultImage.rows * 2 / 3;
+        maxY = resultImage.rows * 3 / 4;
+        minY = 0;
+        maxX = resultImage.cols / 3;
+        minX = 0;
+        maxR = resultImage.rows / 10;
+        minR = resultImage.rows / 20;
+        maxC = 8;
+    } else {
+        Vec4f before = this->ballCoordinates.back();
+        Vec3f info = this->ballInfo.back();
+        //speed 50
+        maxX = before[0] + 100 * (this->frameI - info[0]);
+        minX = before[0];
+        maxY = before[1] + 50 * (this->frameI - info[0]);
+        minY = before[1] - 50 * (this->frameI - info[0]);
+        maxR = static_cast<float>(before[2] * 1.2);
+        minR = before[2] / (2 * (this->frameI - info[0]));
+
+        minSizes = info[1] / (2 * (this->frameI - info[0]));
+        maxC = before[3] * 2;
     }
 
     for (auto &contour : contours) {
-//        if (contour.size() < 7)
-//            continue;
+        if (contour.size() < minSizes)
+            continue;
         Vec4f circle = this->getEdgeCircle(contour);
-//        if (circle[1] > miny)
-//            continue;
-//        if (circle[2] < 10 || circle[2] > 30)
-//            continue;
-//        if (circle[3] < 5)
-//            continue;
-        Point center(round(circle[0]), round(circle[1]));
-        int radius = round(circle[2]);
-        cv::circle(resultImage, center, radius, Scalar(0, 255, 0), 1);
         cout << circle << endl;
-        minC = circle;
+        if (circle[0] > maxX || circle[0] < minX)
+            continue;
+        if (circle[1] > maxY || circle[1] < minY)
+            continue;
+        if (circle[2] > maxR || circle[2] < minR)
+            continue;
+        if (circle[3] > maxC)
+            continue;
+
         if (!minI) {
+            minC = circle;
+            cSize = contour.size();
             minI = true;
+        } else if (circle[3] < minC[3]) {
+            minC = circle;
+            cSize = contour.size();
         }
     }
-    if (minI) {
+    if (!minI) {
         minC[0] = -1;
+        return minC;
     }
+    this->getDepth(minC, resultImage);
+    this->ballCoordinates.push_back(minC);
+    this->ballInfo.emplace_back(this->frameI, cSize, 0);
+    //test
+    Point center(round(minC[0]), round(minC[1]));
+    int radius = round(minC[2]);
+    cv::circle(resultImage, center, radius, Scalar(0, 255, 0), 1);
+    cerr << minC << endl;
     return minC;
 }
 
 int Tracker::isPassed(cv::Mat &frame) {
-    vector<vector<Point>> contours = this->findForegroundContours(frame,1);
+    vector<vector<Point>> contours = this->findForegroundContours(frame, 1);
     if (this->ring[0] < 0) {
     }
     Mat result = frame.clone();
     Vec4f circle = getBall(contours, result);
-    namedWindow("ball",0);
-    resizeWindow("ball",640,480);
+    if (circle[0] < 0) {
+        return -1;
+    }
+    namedWindow("ball", 0);
+    resizeWindow("ball", 640, 480);
     imshow("ball", result);
-    usleep(300000);
+    usleep(100000);
+    return 0;
 }
 
 void Tracker::test() {
     VideoCapture videoCapture("/home/peng/下载/ball_pass_ring(5)/depth(fail).avi");
-    if(!videoCapture.isOpened()){
+    if (!videoCapture.isOpened()) {
         perror("open video fail!");
         return;
     }
 
     Mat frame;
-    int i = 0;
+    this->frameI = 0;
     while (videoCapture.isOpened()) {
         videoCapture >> frame;
         if (frame.empty())
             break;
-        ++i;
-        if (i < 50 || i > 100)
+        ++this->frameI;
+        if (this->frameI < 50 || this->frameI > 100)
             continue;
-        this->isPassed(frame);
-        cout << i << endl;
+        cout << this->frameI << endl;
+            imshow("86", frame);
+        cout << this->isPassed(frame) << endl;
+
         if (waitKey(1) == 27)
             break;
     }
