@@ -26,13 +26,12 @@ public:
 private:
     std::vector<cv::Point2f> ballCoordinates;
     cv::Vec4f ring;
-
+    cv::Ptr<cv::BackgroundSubtractorMOG2> pBackgroundKnn = cv::createBackgroundSubtractorMOG2();
     int isPassed(cv::Mat &frame);
 
     std::vector<std::vector<cv::Point>> findAllContours(cv::Mat &input);
 
     std::vector<std::vector<cv::Point>> findForegroundContours(
-            const cv::Ptr<cv::BackgroundSubtractorMOG2> &pBackgroundKnn,
             cv::Mat scene, double scale);
 
     cv::Vec4f getEdgeCircle(std::vector<cv::Point> contour);

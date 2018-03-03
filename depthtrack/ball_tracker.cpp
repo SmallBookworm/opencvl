@@ -33,17 +33,18 @@ vector<vector<Point>> Tracker::findAllContours(Mat &input) {
 }
 
 std::vector<std::vector<Point>> Tracker::findForegroundContours(
-        const Ptr<BackgroundSubtractorMOG2> &pBackgroundKnn,
         Mat scene, double scale) {
     Mat img;
     resize(scene, img, Size(0, 0), scale, scale);
 
     Mat fgmask, fgimg, bgimg;
-    pBackgroundKnn->apply(img, fgmask);
+    this->pBackgroundKnn->apply(img, fgmask);
 
     medianBlur(fgmask, fgmask, 5);
 
     morphologyEx(fgmask, fgmask, MORPH_CLOSE, Mat::ones(15, 3, CV_8UC1));
+    namedWindow("MORPH_CLOSE", CV_WINDOW_NORMAL);
+    resizeWindow("MORPH_CLOSE", 1080, 720);
     imshow("MORPH_CLOSE", fgmask);
     std::vector<std::vector<Point>> region_contours;
     findContours(fgmask, region_contours, CV_RETR_EXTERNAL,
@@ -111,18 +112,24 @@ cv::Vec4f Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &re
 }
 
 int Tracker::isPassed(cv::Mat &frame) {
-    Ptr<BackgroundSubtractorMOG2> pBackgroundKnn = createBackgroundSubtractorMOG2();
-    vector<vector<Point>> contours = this->findForegroundContours(pBackgroundKnn,frame,1);
+    vector<vector<Point>> contours = this->findForegroundContours(frame,1);
     if (this->ring[0] < 0) {
     }
     Mat result = frame.clone();
     Vec4f circle = getBall(contours, result);
+    namedWindow("ball",0);
+    resizeWindow("ball",640,480);
     imshow("ball", result);
     usleep(300000);
 }
 
 void Tracker::test() {
     VideoCapture videoCapture("/home/peng/下载/ball_pass_ring(5)/depth(fail).avi");
+    if(!videoCapture.isOpened()){
+        perror("open video fail!");
+        return;
+    }
+
     Mat frame;
     int i = 0;
     while (videoCapture.isOpened()) {
@@ -130,7 +137,7 @@ void Tracker::test() {
         if (frame.empty())
             break;
         ++i;
-        if (i < 70 || i > 100)
+        if (i < 50 || i > 100)
             continue;
         this->isPassed(frame);
         cout << i << endl;

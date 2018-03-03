@@ -41,8 +41,8 @@ int main() {
                                                                                      4); // check here (https://github.com/OpenKinect/libfreenect2/issues/337) and here (https://github.com/OpenKinect/libfreenect2/issues/464) why depth2rgb image should be bigger
     Mat rgbmat, depthmat, depthmatUndistorted, irmat, rgbd, rgbd2;
     //open writer
-    VideoWriter videoWriter, videoWriter0, videoWriter1, videoWriter2;
-    string videoID = "0";
+    VideoWriter videoWriter, videoWriter0, videoWriter1, videoWriter2,videoWriter3;
+    string videoID = "6";
     //! [loop start]
     while (!protonect.protonect_shutdown) {
         protonect.listener->waitForNewFrame(frames);
@@ -78,6 +78,16 @@ int main() {
         }
         Mat irdf = mergeC3(irmat);
         videoWriter1 << irdf;
+        if (!videoWriter3.isOpened()) {
+            videoWriter3.open(
+                    "/home/peng/下载/test/rgb" + videoID + ".avi",
+                    CV_FOURCC('M', 'J', 'P', 'G'),
+                    30,
+                    Size(rgbmat.cols, rgbmat.rows),
+                    true
+            );
+        }
+        videoWriter3 << rgbmat;
         //show normal in opencv
         cv::imshow("depth", df / 4500.0f);
         cv::imshow("ir", irmat / 4500.0f);
@@ -113,7 +123,7 @@ int main() {
             );
         }
         videoWriter2 << rgbd;
-        cv::imshow("undistorted", depthmatUndistorted / 4500.0f);
+        //cv::imshow("undistorted", depthmatUndistorted / 4500.0f);
         cv::imshow("registered", rgbd);
         cv::imshow("depth2RGB", rgbd2 / 4500.0f);
 
