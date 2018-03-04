@@ -29,6 +29,7 @@ private:
     std::vector<cv::Vec4f> ballCoordinates;
     //frame,points size,depth,
     std::vector<cv::Vec3f> ballInfo;
+    //x,y,r,depth
     cv::Vec4f ring;
     cv::Ptr<cv::BackgroundSubtractorMOG2> pBackgroundKnn = cv::createBackgroundSubtractorMOG2();
 
@@ -45,9 +46,18 @@ private:
 
     cv::Vec4f getBall(std::vector<std::vector<cv::Point>> contours, cv::Mat &result);
 
+    int getRing(std::vector<std::vector<cv::Point>> contours, cv::Mat &result);
+
+    cv::RotatedRect getRingPole(std::vector<cv::Point> contours);
+
+    template<typename T>
+    float selectROIDepth(std::string windowName, cv::Mat &depthMat);
 
     template<typename T>
     float getCircleDepth(cv::Vec4f circle, cv::Mat &depthMat);
+
+    template<typename T>
+    float getRectDepth(cv::Rect circle, cv::Mat &depthMat);
 };
 
 #endif //DEPTHTRACK_BALL_TRACKER_H
