@@ -45,7 +45,9 @@ private:
 
     cv::Vec4f getBall(std::vector<std::vector<cv::Point>> contours, cv::Mat &result);
 
-    float getDepth(cv::Vec4f circle, cv::Mat &depthMat);
+
+    template<typename T>
+    float getCircleDepth(cv::Vec4f circle, cv::Mat &depthMat);
 };
 
 #endif //DEPTHTRACK_BALL_TRACKER_H

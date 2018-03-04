@@ -77,11 +77,23 @@ Vec4f Tracker::getEdgeCircle(std::vector<Point> contour) {
     circle[3] /= contour.size();
     return circle;
 }
-
-float Tracker::getDepth(cv::Vec4f circle, cv::Mat &depthMat) {
-    Mat roi=depthMat.operator()(Rect());
-
-
+template <class T>
+float Tracker::getCircleDepth(cv::Vec4f circle, cv::Mat &depthMat) {
+    float result = 0;
+    int count=0;
+    for (int i = static_cast<int>(ceil(circle[1] - circle[2])); i < circle[1] + circle[2]; ++i) {
+        double squareX = pow(circle[2], 2) - pow(i - circle[1], 2);
+        int maxX = static_cast<int>(sqrt(squareX) + circle[0]);
+        int minX = static_cast<int>(ceil(circle[0] - sqrt(squareX)));
+        for (int j = minX; j < maxX; ++j) {
+            T depth = depthMat.at<T>(i, j);
+            //test
+            //cout << "point" << i << "," << j << ":" << depth << endl;
+            result += depth[0];
+            count++;
+        }
+    }
+    return result/count;
 }
 
 cv::Vec4f Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage) {
@@ -117,7 +129,8 @@ cv::Vec4f Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &re
         if (contour.size() < minSizes)
             continue;
         Vec4f circle = this->getEdgeCircle(contour);
-        cout << circle << endl;
+        //test
+        //cout << circle << endl;
         if (circle[0] > maxX || circle[0] < minX)
             continue;
         if (circle[1] > maxY || circle[1] < minY)
@@ -140,14 +153,14 @@ cv::Vec4f Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &re
         minC[0] = -1;
         return minC;
     }
-    this->getDepth(minC, resultImage);
     this->ballCoordinates.push_back(minC);
-    this->ballInfo.emplace_back(this->frameI, cSize, 0);
+    this->ballInfo.emplace_back(this->frameI, cSize, this->getCircleDepth<Vec3b>(minC, resultImage));
     //test
     Point center(round(minC[0]), round(minC[1]));
     int radius = round(minC[2]);
     cv::circle(resultImage, center, radius, Scalar(0, 255, 0), 1);
     cerr << minC << endl;
+    cerr << this->ballInfo.back() << endl;
     return minC;
 }
 
@@ -168,7 +181,7 @@ int Tracker::isPassed(cv::Mat &frame) {
 }
 
 void Tracker::test() {
-    VideoCapture videoCapture("/home/peng/下载/ball_pass_ring(5)/depth(fail).avi");
+    VideoCapture videoCapture("/home/peng/下载/ball_pass_ring(5)/depth(pass).avi");
     if (!videoCapture.isOpened()) {
         perror("open video fail!");
         return;
@@ -181,10 +194,11 @@ void Tracker::test() {
         if (frame.empty())
             break;
         ++this->frameI;
-        if (this->frameI < 50 || this->frameI > 100)
+        if (this->frameI < 30 || this->frameI > 100)
             continue;
         cout << this->frameI << endl;
-            imshow("86", frame);
+        if(this->frameI==54)
+        imshow("86", frame);
         cout << this->isPassed(frame) << endl;
 
         if (waitKey(1) == 27)
