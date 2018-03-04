@@ -298,8 +298,19 @@ void Tracker::test() {
 
 }
 
+
+
+ void Tracker::sigint_handler(int s) {
+    protonect_shutdown = true;
+}
 // move-constructible function object (i.e., an object whose class defines operator(), including closures and function objects).
 void Tracker::operator()(std::future<int> &fut) {
+
+    if(protonect.connect()<0){
+        return;
+    }
+    signal(SIGINT, Tracker::sigint_handler);
+    protonect.protonect_shutdown = false;
     future_status status;
     do {
 

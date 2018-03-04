@@ -10,13 +10,18 @@
 #include <zconf.h>
 #include <future>
 #include <opencv2/opencv.hpp>
-
+#include "protonect.h"
 
 // move-constructible function object (i.e., an object whose class defines operator(), including closures and function objects).
 
 class Tracker {
 public:
     Tracker();
+
+    static Protonect protonect;
+    static bool protonect_shutdown;
+
+    static void sigint_handler(int s);
 
     //define operator()
     void operator()(std::future<int> &fut);
@@ -31,6 +36,8 @@ private:
     std::vector<cv::Vec3f> ballInfo;
     //x,y,r,depth
     cv::Vec4f ring;
+
+
     cv::Ptr<cv::BackgroundSubtractorMOG2> pBackgroundKnn = cv::createBackgroundSubtractorMOG2();
 
     int isPassed(cv::Mat &frame);
