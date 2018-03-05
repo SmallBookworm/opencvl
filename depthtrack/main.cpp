@@ -17,6 +17,5 @@ int main() {
     //tracker.test();
     getchar();
     prom.set_value(10);
-    waitKey(0);
     return 0;
 }

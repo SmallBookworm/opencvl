@@ -7,6 +7,12 @@
 using namespace std;
 using namespace cv;
 
+void Protonect::sigint_handler(int s) {
+    Protonect::protonect_shutdown = true;
+}
+
+
+
 int Protonect::connect() {
     //! [context]
     //! [context]
@@ -58,8 +64,8 @@ int Protonect::connect() {
         return -1;
     }
 
-    //signal(SIGINT, this->sigint_handler);
-    //this->protonect_shutdown = false;
+    signal(SIGINT, this->sigint_handler);
+    this->protonect_shutdown = false;
 
     //! [listeners]
     this->listener = new libfreenect2::SyncMultiFrameListener(libfreenect2::Frame::Color |

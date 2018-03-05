@@ -9,6 +9,7 @@ using namespace std;
 using namespace cv;
 
 Tracker::Tracker() {
+    this->frameI = 0;
     this->ring[0] = -1;
 }
 
@@ -298,23 +299,53 @@ void Tracker::test() {
 
 }
 
+bool Protonect::protonect_shutdown = false;
 
-
- void Tracker::sigint_handler(int s) {
-    protonect_shutdown = true;
-}
 // move-constructible function object (i.e., an object whose class defines operator(), including closures and function objects).
 void Tracker::operator()(std::future<int> &fut) {
 
-    if(protonect.connect()<0){
+    if (this->protonect.connect() < 0) {
         return;
     }
-    signal(SIGINT, Tracker::sigint_handler);
-    protonect.protonect_shutdown = false;
+    this->protonect.start();
+    libfreenect2::FrameMap frames;
+    Mat depthmat;
     future_status status;
     do {
+        protonect.listener->waitForNewFrame(frames);
+        libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
+        libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
+        libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
 
+        cv::Mat(depth->height, depth->width, CV_32FC1, depth->data).copyTo(depthmat);
+        //main
+        ++this->frameI;
+        cout << this->frameI << endl;
+        int pas = this->isPassed(depthmat);
+        switch (pas) {
+            case -1:
+                cerr << "no ball!" << endl;
+                break;
+            case 0:
+                cout << "\033[33m" << "run" << "\033[0m" << endl;
+                break;
+            case 1:
+                cout << "\033[32m" << "success!" << "\033[0m" << endl;
+                break;
+            case 2:
+                cout << "\033[32m" << "fail!" << "\033[0m" << endl;
+                break;
+        }
+        //main
+        //test
+        cv::imshow("depth", depthmat / 4500.0f);
+        int key = cv::waitKey(1);
+        Protonect::protonect_shutdown =
+                Protonect::protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
+
+        protonect.listener->release(frames);
         status = fut.wait_for(chrono::milliseconds(1));
-    } while (status != future_status::ready);
+    } while (!Protonect::protonect_shutdown && (status != future_status::ready));
+    protonect.stop();
 }
 

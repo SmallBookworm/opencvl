@@ -21,7 +21,8 @@ enum Processor {
 
 class Protonect {
 public:
-    bool protonect_shutdown = false;
+    static bool protonect_shutdown ;
+    static void sigint_handler(int s);
     libfreenect2::Freenect2 freenect2;
     libfreenect2::PacketPipeline *pipeline = nullptr;
     libfreenect2::Freenect2Device *dev = nullptr;

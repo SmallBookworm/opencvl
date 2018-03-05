@@ -20,19 +20,13 @@ Mat mergeC3(Mat depthmat) {
     return df;
 }
 
-Protonect protonect;
-
-void sigint_handler(int s) {
-    protonect.protonect_shutdown = true;
-}
+bool Protonect::protonect_shutdown = false;
 
 int main() {
-
+    Protonect protonect;
     if (protonect.connect() < 0) {
         return -1;
     }
-    signal(SIGINT, sigint_handler);
-    protonect.protonect_shutdown = false;
 
     protonect.start();
     libfreenect2::FrameMap frames;
@@ -41,10 +35,10 @@ int main() {
                                                                                      4); // check here (https://github.com/OpenKinect/libfreenect2/issues/337) and here (https://github.com/OpenKinect/libfreenect2/issues/464) why depth2rgb image should be bigger
     Mat rgbmat, depthmat, depthmatUndistorted, irmat, rgbd, rgbd2;
     //open writer
-    VideoWriter videoWriter, videoWriter0, videoWriter1, videoWriter2,videoWriter3;
+    VideoWriter videoWriter, videoWriter0, videoWriter1, videoWriter2, videoWriter3;
     string videoID = "6";
     //! [loop start]
-    while (!protonect.protonect_shutdown) {
+    while (!Protonect::protonect_shutdown) {
         protonect.listener->waitForNewFrame(frames);
         libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
         libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
