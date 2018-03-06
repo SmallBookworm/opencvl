@@ -13,6 +13,11 @@ Tracker::Tracker() {
     this->ring[0] = -1;
 }
 
+template<typename T>
+double Tracker::distance(T x1, T x2, T y1, T y2) {
+    return sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
+}
+
 Mat Tracker::leastSquares(cv::Mat inMat, cv::Mat outMat) {
     Mat res = inMat.t() * inMat;
     res = res.inv();
@@ -34,8 +39,8 @@ Vec3f Tracker::x2curveFitting(std::vector<float> x, std::vector<float> y) {
         auto *pyvec = outMat.ptr<float>(i);
         pyvec[0] = y[i];
     }
-    Mat res= this->leastSquares(inMat,outMat);
-    return Vec3f(res.at<float>(0,0),res.at<float>(0,1),res.at<float>(0,2));
+    Mat res = this->leastSquares(inMat, outMat);
+    return Vec3f(res.at<float>(0, 0), res.at<float>(0, 1), res.at<float>(0, 2));
 }
 
 vector<vector<Point>> Tracker::findAllContours(Mat &input) {
@@ -106,12 +111,23 @@ Vec4f Tracker::getEdgeCircle(std::vector<Point> contour) {
     return circle;
 }
 
+cv::Vec3f Tracker::getCircleCoordinate(cv::Vec4f circle, cv::Vec3f info, int wWidth, int wHeight) {
+    Vec3f coordinate;
+    coordinate[2] = info[2];
+    coordinate[0] = static_cast<float>(info[2] * tan((57.5 / 2) / 180 * M_PI) * (wWidth / 2 - circle[0]) /
+                                       (wWidth / 2));
+    coordinate[1] = static_cast<float>(info[2] * tan((43.5 / 2) / 180 * M_PI) * (wHeight / 2 - circle[1]) /
+                                       (wHeight / 2));
+    return coordinate;
+}
+
 template<class T>
 float Tracker::getCircleDepth(cv::Vec4f circle, cv::Mat &depthMat) {
     float result = 0;
     int count = 0;
-    for (int i = static_cast<int>(ceil(circle[1] - circle[2])); i < circle[1] + circle[2]; ++i) {
-        double squareX = pow(circle[2], 2) - pow(i - circle[1], 2);
+    float a = circle[2] / 2;
+    for (int i = static_cast<int>(ceil(circle[1] - a)); i < circle[1] + a; ++i) {
+        double squareX = pow(a, 2) - pow(i - circle[1], 2);
         int maxX = static_cast<int>(sqrt(squareX) + circle[0]);
         int minX = static_cast<int>(ceil(circle[0] - sqrt(squareX)));
         for (int j = minX; j < maxX; ++j) {
@@ -210,6 +226,7 @@ cv::Vec4f Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &re
     }
     this->ballCoordinates.push_back(minC);
     this->ballInfo.emplace_back(this->frameI, cSize, this->getCircleDepth<Vec3b>(minC, resultImage));
+    this->realCoordinates.push_back(this->getCircleCoordinate(minC,this->ballInfo.back()));
     //test
     Point center(round(minC[0]), round(minC[1]));
     int radius = round(minC[2]);
@@ -244,6 +261,20 @@ int Tracker::getRing(std::vector<std::vector<cv::Point>> contours, cv::Mat &resu
     return 1;
 }
 
+int Tracker::passCF() {
+    if (this->ballInfo.size() > 2) {
+        vector<float> x, y;
+        for (int i = 0; i < this->ballCoordinates.size(); ++i) {
+            x.push_back(this->ballInfo[i][2]);
+            y.push_back(this->ballCoordinates[i][1]);
+        }
+        Vec3f func = this->x2curveFitting(x, y);
+        double resY = func[0] + func[1] * this->ring[3] + func[2] * pow(this->ring[3], 2);
+
+    } else
+        return -1;
+}
+
 //-1 no ball,0 ball run,1 pass,2 not pass
 int Tracker::isPassed(cv::Mat &frame) {
     vector<vector<Point>> contours = this->findForegroundContours(frame, 1);
@@ -256,13 +287,16 @@ int Tracker::isPassed(cv::Mat &frame) {
     }
     Mat result = frame.clone();
     Vec4f circle = getBall(contours, result);
-    // restart when no ball in 10 frames
+    // restart when no ball in 5 frames
     if (circle[0] < 0) {
-        if (!this->ballInfo.empty() && this->frameI - this->ballInfo.back()[0] > 10) {
+        int res = -1;
+        if (!this->ballInfo.empty() && this->frameI - this->ballInfo.back()[0] > 5) {
+            res = this->passCF();
             this->ballInfo.clear();
             this->ballCoordinates.clear();
+            this->realCoordinates.clear();
         }
-        return -1;
+        return res;
     }
     namedWindow("ball", 0);
     resizeWindow("ball", 640, 480);
@@ -270,11 +304,12 @@ int Tracker::isPassed(cv::Mat &frame) {
     usleep(100000);
     Vec3f info0 = this->ballInfo.back();
     if (info0[2] >= this->ring[3]) {
-        if (this->frameI - this->ballInfo.back()[0] > 10) {
-            this->ballInfo.clear();
-            this->ballCoordinates.clear();
-        }
-        if (sqrt(pow((info0[0] - this->ring[0]), 2) + pow(info0[1] - this->ring[1], 2)) < this->ring[2])
+        double dis = this->distance<float>(info0[0], this->ring[0], info0[1], this->ring[1]);
+        bool flag = (dis + info0[2]) < this->ring[2];
+        this->ballInfo.clear();
+        this->ballCoordinates.clear();
+        this->realCoordinates.clear();
+        if (flag)
             return 1;
         else
             return 2;
@@ -285,7 +320,7 @@ int Tracker::isPassed(cv::Mat &frame) {
 
 void Tracker::test() {
     vector<float> x = {0, 1, 2}, y = {2, 1, -2};
-    cout<<this->x2curveFitting(x, y)<<endl;
+    cout << this->x2curveFitting(x, y) << endl;
 
     VideoCapture videoCapture("/home/peng/下载/ball_pass_ring(5)/depth(fail).avi");
     if (!videoCapture.isOpened()) {
@@ -303,7 +338,7 @@ void Tracker::test() {
         if (this->frameI < 30 || this->frameI > 1000)
             continue;
         cout << this->frameI << endl;
-        if (this->frameI == 93)
+        if (this->frameI == 99)
             imshow("97", frame);
         int pas = this->isPassed(frame);
         switch (pas) {

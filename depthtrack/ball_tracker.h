@@ -29,6 +29,8 @@ private:
     int frameI;
     //x,y,r,score
     std::vector<cv::Vec4f> ballCoordinates;
+    //x,y,z
+    std::vector<cv::Vec3f> realCoordinates;
     //frame,points size,depth,
     std::vector<cv::Vec3f> ballInfo;
     //x,y,r,depth
@@ -36,10 +38,16 @@ private:
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> pBackgroundKnn = cv::createBackgroundSubtractorMOG2();
 
+
+    template<typename T>
+    double distance(T x1, T x2, T y1, T y2);
+
     //参与点乘的两个Mat矩阵的数据类型（type）只能是 CV_32F、 CV_64FC1、 CV_32FC2、 CV_64FC2 这4种类型中的一种
     cv::Mat leastSquares(cv::Mat inMat, cv::Mat outMat);
 
     cv::Vec3f x2curveFitting(std::vector<float> x, std::vector<float> y);
+
+    int passCF();
 
     int isPassed(cv::Mat &frame);
 
@@ -49,6 +57,8 @@ private:
             cv::Mat scene, double scale);
 
     cv::Vec4f getEdgeCircle(std::vector<cv::Point> contour);
+
+    cv::Vec3f getCircleCoordinate(cv::Vec4f circle, cv::Vec3f info, int wWidth = 512, int wHeight = 424);
 
     std::vector<cv::RotatedRect> getRotatedRect(std::vector<std::vector<cv::Point>>);
 
