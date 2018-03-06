@@ -26,8 +26,16 @@ Vec3f Tracker::x2curveFitting(std::vector<float> x, std::vector<float> y) {
     int size = static_cast<int>(x.size());
     Mat inMat(size, 3, CV_32FC1), outMat(size, 1, CV_32FC1);
     for (int i = 0; i < size; ++i) {
-
+        auto *pxvec = inMat.ptr<float>(i);
+        int j;
+        for (j = 0; j < 3; ++j) {
+            pxvec[j] = static_cast<float>(pow(x[i], j));
+        }
+        auto *pyvec = outMat.ptr<float>(i);
+        pyvec[0] = y[i];
     }
+    Mat res= this->leastSquares(inMat,outMat);
+    return Vec3f(res.at<float>(0,0),res.at<float>(0,1),res.at<float>(0,2));
 }
 
 vector<vector<Point>> Tracker::findAllContours(Mat &input) {
@@ -276,6 +284,9 @@ int Tracker::isPassed(cv::Mat &frame) {
 }
 
 void Tracker::test() {
+    vector<float> x = {0, 1, 2}, y = {2, 1, -2};
+    cout<<this->x2curveFitting(x, y)<<endl;
+
     VideoCapture videoCapture("/home/peng/下载/ball_pass_ring(5)/depth(fail).avi");
     if (!videoCapture.isOpened()) {
         perror("open video fail!");
@@ -320,12 +331,6 @@ bool Protonect::protonect_shutdown = false;
 
 // move-constructible function object (i.e., an object whose class defines operator(), including closures and function objects).
 void Tracker::operator()(std::future<int> &fut) {
-    float a1[2][1] = {{1},
-                      {2}};
-    float a2[2] = {1, 2};
-    Mat m1(2, 1, CV_32FC1, a1);
-    Mat m2(2, 1, CV_32FC1, a2);
-    cout << this->leastSquares(m1, m2) << endl;
     if (this->protonect.connect() < 0) {
         return;
     }
