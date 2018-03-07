@@ -36,7 +36,8 @@ private:
     //x,y,r,depth
     cv::Vec4f ring;
     //x,y,z
-    cv::Vec3f realRing;
+    cv::Vec3f ringCoordinate;
+    float rRingR;
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> pBackgroundKnn = cv::createBackgroundSubtractorMOG2();
 
@@ -78,7 +79,6 @@ private:
     template<typename T>
     float selectROIDepth(std::string windowName, cv::Mat &depthMat);
 
-    template<typename T>
     float getCircleDepth(cv::Vec4f circle, cv::Mat &depthMat);
 
     template<typename T>

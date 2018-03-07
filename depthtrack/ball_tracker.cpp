@@ -103,7 +103,7 @@ std::vector<std::vector<Point>> Tracker::findForegroundContours(
     //test
 //    namedWindow("MORPH_CLOSE", CV_WINDOW_NORMAL);
 //    resizeWindow("MORPH_CLOSE", 1080, 720);
-//    imshow("MORPH_CLOSE", fgmask);
+    imshow("MORPH_CLOSE", fgmask);
     std::vector<std::vector<Point>> region_contours;
     findContours(fgmask, region_contours, CV_RETR_EXTERNAL,
                  CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
@@ -145,20 +145,21 @@ cv::Vec3f Tracker::getCircleCoordinate(cv::Vec4f circle, cv::Vec3f info, int wWi
     return coordinate;
 }
 
-template<class T>
 float Tracker::getCircleDepth(cv::Vec4f circle, cv::Mat &depthMat) {
     float result = 0;
     int count = 0;
     float a = circle[2] / 2;
+    if ((circle[0] + circle[2]) >= depthMat.cols || (circle[1] + circle[2]) >= depthMat.rows)
+        return -1;
     for (int i = static_cast<int>(ceil(circle[1] - a)); i < circle[1] + a; ++i) {
         double squareX = pow(a, 2) - pow(i - circle[1], 2);
         int maxX = static_cast<int>(sqrt(squareX) + circle[0]);
         int minX = static_cast<int>(ceil(circle[0] - sqrt(squareX)));
         for (int j = minX; j < maxX; ++j) {
-            T depth = depthMat.at<T>(i, j);
+            float depth = depthMat.at<float>(i, j);
             //test
             //cout << "point" << i << "," << j << ":" << depth << endl;
-            result += depth[0];
+            result += depth;
             count++;
         }
     }
@@ -189,59 +190,92 @@ template<typename T>
 float Tracker::selectROIDepth(std::string windowName, cv::Mat &depthMat) {
     Rect rect = selectROI(windowName, depthMat);
     cout << "tl:" << rect.tl() << endl;
-    return depthMat.at<T>(rect.tl())[0];
+    return depthMat.at<T>(rect.tl());
 }
 
 cv::Vec4f Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage) {
     bool minI = false;
     Vec4f minC;
+    Vec3f realC;
+    float cDepth;
     float cSize;
-    float minSizes, minX, minY, maxX, maxY, minR, maxR, maxC;
+    float minSizes, maxsizes, minX, minY, maxX, maxY, minDi, maxDi, minD, maxD, maxC, minR;
     minSizes = 20;
-    if (this->ballCoordinates.empty()) {
-        maxY = resultImage.rows * 3 / 4;
+    maxsizes = 200;
+    if (this->realCoordinates.empty()) {
+        maxY = resultImage.rows;
         minY = 0;
-        maxX = resultImage.cols / 2;
-        minX = 0;
-        maxR = resultImage.rows / 10;
-        minR = resultImage.rows / 35;
-        maxC = 3;
+        maxX = resultImage.cols;
+        minX = resultImage.cols * 3 / 4;
+        minR = 2;
+
+        minD = 500;
+        maxD = 2000;
+        maxC = 30;
     } else {
-        Vec4f before = this->ballCoordinates.back();
         Vec3f info = this->ballInfo.back();
         //speed 50
-        maxX = before[0] + 100 * (this->frameI - info[0]);
-        minX = before[0];
-        maxY = before[1] + 50 * (this->frameI - info[0]);
-        minY = before[1] - 50 * (this->frameI - info[0]);
-        maxR = static_cast<float>(before[2] * 1.2);
-        minR = before[2] / (2 * (this->frameI - info[0]));
+//        maxX = before[0] + 100 * (this->frameI - info[0]);
+//        minX = before[0];
+//        maxY = before[1] + 50 * (this->frameI - info[0]);
+//        minY = before[1] - 50 * (this->frameI - info[0]);
 
-        minSizes = info[1] / (2 * (this->frameI - info[0]));
+        maxDi = 4000 * (this->frameI - info[0]);
+        minDi = 0;
+        maxD = info[2] + 1000 * (this->frameI - info[0]) + 1200;
+        minD = info[2] + 1000 * (this->frameI - info[0]) - 1200;
+
+        minSizes = static_cast<float>(info[1] / (2 * (this->frameI - info[0])));
+        Vec4f before = this->ballCoordinates.back();
+        minR = before[2] / 4;
         maxC = before[3] * 2;
+        maxC = 1 > maxC ? 1 : maxC;
     }
     for (auto &contour : contours) {
-        if (contour.size() < minSizes)
+        //cout<<contour.size()<<endl;
+        if (contour.size() < minSizes || contour.size() > maxsizes)
             continue;
+
         Vec4f circle = this->getEdgeCircle(contour);
-        //test
-        //cout << circle << endl;
-        if (circle[0] > maxX || circle[0] < minX)
+        if (circle[2] < minR)
             continue;
-        if (circle[1] > maxY || circle[1] < minY)
+
+        float depth = this->getCircleDepth(circle, resultImage);
+        if (isnan(depth) || depth < 0)
             continue;
-        if (circle[2] > maxR || circle[2] < minR)
+
+        Vec3f coor = this->getCircleCoordinate(circle, Vec3f(0, 0, depth));
+        if (depth > maxD || depth < minD)
             continue;
         if (circle[3] > maxC)
             continue;
+        //test
+        cout << "depth:" << depth << endl;
+        cout << circle << endl;
+        if (this->realCoordinates.empty()) {
+            if (circle[0] > maxX || circle[0] < minX)
+                continue;
+            if (circle[1] > maxY || circle[1] < minY)
+                continue;
+        } else {
+            double dis = this->realDistance(coor, this->realCoordinates.back());
+            cout << "distance:" << dis << endl;
+            if (dis > maxDi || dis < minDi)
+                continue;
+        }
+
 
         if (!minI) {
             minC = circle;
             cSize = contour.size();
+            cDepth = depth;
+            realC = coor;
             minI = true;
         } else if (circle[3] < minC[3]) {
             minC = circle;
             cSize = contour.size();
+            cDepth = depth;
+            realC = coor;
         }
     }
     if (!minI) {
@@ -249,14 +283,15 @@ cv::Vec4f Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &re
         return minC;
     }
     this->ballCoordinates.push_back(minC);
-    this->ballInfo.emplace_back(this->frameI, cSize, this->getCircleDepth<Vec3b>(minC, resultImage));
-    this->realCoordinates.push_back(this->getCircleCoordinate(minC, this->ballInfo.back()));
+    this->ballInfo.emplace_back(this->frameI, cSize, cDepth);
+    this->realCoordinates.push_back(realC);
     //test
     Point center(round(minC[0]), round(minC[1]));
     int radius = round(minC[2]);
     cv::circle(resultImage, center, radius, Scalar(0, 255, 0), 1);
     cerr << minC << endl;
     cerr << this->ballInfo.back() << endl;
+    cerr << realC << endl;
     return minC;
 }
 
@@ -315,7 +350,10 @@ int Tracker::passCF() {
         float bdepth = this->ballInfo.back()[2];
         //512x424
         double realR = br / 256 * bdepth * tan((57.5 / 2) / 180 * M_PI);
-        if(realR+dis)
+        if (realR + dis < this->rRingR)
+            return 1;
+        else
+            return 2;
     } else
         return -1;
 }
@@ -324,12 +362,13 @@ int Tracker::passCF() {
 int Tracker::isPassed(cv::Mat &frame) {
     vector<vector<Point>> contours = this->findForegroundContours(frame, 1);
     if (this->ring[0] < 0) {
-//        Mat ringR = frame.clone();
+//       Mat ringR = frame.clone();
 //            imshow("ring", ringR);
-//
-//        cout<<"depth:"<<this->selectROIDepth<Vec3b>("ring", ringR)<<endl;
-        this->ring = Vec4f(240, 234, 51, 180);
+//        cout<<"depth:"<<this->selectROIDepth<float>("ring", ringR)<<endl;
+
+        this->ring = Vec4f(357, 159, 35, 4200);
         this->ringCoordinate = this->getCircleCoordinate(this->ring, Vec3f(0, 0, this->ring[3]));
+        this->rRingR = static_cast<float>(this->ring[2] / 256 * this->ring[3] * tan((57.5 / 2) / 180 * M_PI));
     }
     Mat result = frame.clone();
     Vec4f circle = getBall(contours, result);
@@ -350,15 +389,13 @@ int Tracker::isPassed(cv::Mat &frame) {
     usleep(100000);
     Vec3f info0 = this->ballInfo.back();
     if (info0[2] >= this->ring[3]) {
-        double dis = this->distance<float>(info0[0], this->ring[0], info0[1], this->ring[1]);
-        bool flag = (dis + info0[2]) < this->ring[2];
+        //double dis = this->distance<float>(info0[0], this->ring[0], info0[1], this->ring[1]);
+        //bool flag = (dis + info0[2]) < this->ring[2];
+        int res = this->passCF();
         this->ballInfo.clear();
         this->ballCoordinates.clear();
         this->realCoordinates.clear();
-        if (flag)
-            return 1;
-        else
-            return 2;
+        return res;
     }
 
     return 0;
@@ -368,7 +405,7 @@ void Tracker::test() {
     vector<float> x = {0, 1, 2}, y = {2, 1, -2};
     cout << this->x2curveFitting(x, y) << endl;
 
-    VideoCapture videoCapture("/home/peng/下载/ball_pass_ring(5)/depth(fail).avi");
+    VideoCapture videoCapture("/home/peng/下载/ball_pass_ring(5)/depth(pass3).avi");
     if (!videoCapture.isOpened()) {
         perror("open video fail!");
         return;
@@ -381,7 +418,7 @@ void Tracker::test() {
         if (frame.empty())
             break;
         ++this->frameI;
-        if (this->frameI < 30 || this->frameI > 1000)
+        if (this->frameI < 0 || this->frameI > 1000)
             continue;
         cout << this->frameI << endl;
         if (this->frameI == 99)
@@ -428,7 +465,7 @@ void Tracker::operator()(std::future<int> &fut) {
         cv::Mat(depth->height, depth->width, CV_32FC1, depth->data).copyTo(depthmat);
         //main
         ++this->frameI;
-        cout << this->frameI << endl;
+        cout << "frame:" << this->frameI << endl;
         int pas = this->isPassed(depthmat);
         switch (pas) {
             case -1:
