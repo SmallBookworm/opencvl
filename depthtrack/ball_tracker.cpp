@@ -18,6 +18,10 @@ double Tracker::distance(T x1, T x2, T y1, T y2) {
     return sqrt(pow(x1 - x2, 2) + pow(y1 - y2, 2));
 }
 
+double Tracker::realDistance(cv::Vec3f point1, cv::Vec3f point2) {
+    return sqrt(pow(point1[0] - point2[0], 2) + pow(point1[1] - point2[1], 2) + pow(point1[2] - point2[2], 2));
+}
+
 Mat Tracker::leastSquares(cv::Mat inMat, cv::Mat outMat) {
     Mat res = inMat.t() * inMat;
     res = res.inv();
@@ -25,6 +29,26 @@ Mat Tracker::leastSquares(cv::Mat inMat, cv::Mat outMat) {
     res *= outMat;
     return res;
 
+}
+
+std::vector<float> Tracker::curveFitting(std::vector<float> x, std::vector<float> y, int dimension) {
+    int size = static_cast<int>(x.size());
+    Mat inMat(size, dimension + 1, CV_32FC1), outMat(size, 1, CV_32FC1);
+    for (int i = 0; i < size; ++i) {
+        auto *pxvec = inMat.ptr<float>(i);
+        int j;
+        for (j = 0; j < dimension + 1; ++j) {
+            pxvec[j] = static_cast<float>(pow(x[i], j));
+        }
+        auto *pyvec = outMat.ptr<float>(i);
+        pyvec[0] = y[i];
+    }
+    Mat res = this->leastSquares(inMat, outMat);
+    vector<float> ds;
+    for (int k = 0; k < dimension + 1; ++k) {
+        ds.push_back(res.at<float>(0, k));
+    }
+    return ds;
 }
 
 Vec3f Tracker::x2curveFitting(std::vector<float> x, std::vector<float> y) {
@@ -226,7 +250,7 @@ cv::Vec4f Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &re
     }
     this->ballCoordinates.push_back(minC);
     this->ballInfo.emplace_back(this->frameI, cSize, this->getCircleDepth<Vec3b>(minC, resultImage));
-    this->realCoordinates.push_back(this->getCircleCoordinate(minC,this->ballInfo.back()));
+    this->realCoordinates.push_back(this->getCircleCoordinate(minC, this->ballInfo.back()));
     //test
     Point center(round(minC[0]), round(minC[1]));
     int radius = round(minC[2]);
@@ -262,15 +286,36 @@ int Tracker::getRing(std::vector<std::vector<cv::Point>> contours, cv::Mat &resu
 }
 
 int Tracker::passCF() {
-    if (this->ballInfo.size() > 2) {
-        vector<float> x, y;
-        for (int i = 0; i < this->ballCoordinates.size(); ++i) {
-            x.push_back(this->ballInfo[i][2]);
-            y.push_back(this->ballCoordinates[i][1]);
+    unsigned long size = this->ballInfo.size();
+    if (size > 2) {
+        //x,y,z
+        Vec3f point;
+        point[2] = this->ring[3];
+        vector<float> xs, ys;
+        for (int i = 0; i < size; ++i) {
+            xs.push_back(this->realCoordinates[i][0]);
+            ys.push_back(this->realCoordinates[i][2]);
         }
-        Vec3f func = this->x2curveFitting(x, y);
-        double resY = func[0] + func[1] * this->ring[3] + func[2] * pow(this->ring[3], 2);
+        vector<float> func1 = this->curveFitting(xs, ys, 1);
+        point[0] = (point[2] - func1[0]) / func1[1];
 
+        float b = func1[1];
+        double bc = sqrt(pow(1 / b, 2) + 1);
+        xs.clear();
+        ys.clear();
+        for (int j = 0; j < size; ++j) {
+            xs.push_back(static_cast<float &&>(this->ballInfo[j][2] * bc));
+            ys.push_back(this->realCoordinates[j][1]);
+        }
+        Vec3f func2 = this->x2curveFitting(xs, ys);
+        point[1] = static_cast<float>(func2[0] + func2[1] * point[2] * bc + func2[2] * pow(point[2] * bc, 2));
+        double dis = this->realDistance(this->ringCoordinate, point);
+
+        float br = this->ballCoordinates.back()[2];
+        float bdepth = this->ballInfo.back()[2];
+        //512x424
+        double realR = br / 256 * bdepth * tan((57.5 / 2) / 180 * M_PI);
+        if(realR+dis)
     } else
         return -1;
 }
@@ -284,6 +329,7 @@ int Tracker::isPassed(cv::Mat &frame) {
 //
 //        cout<<"depth:"<<this->selectROIDepth<Vec3b>("ring", ringR)<<endl;
         this->ring = Vec4f(240, 234, 51, 180);
+        this->ringCoordinate = this->getCircleCoordinate(this->ring, Vec3f(0, 0, this->ring[3]));
     }
     Mat result = frame.clone();
     Vec4f circle = getBall(contours, result);
