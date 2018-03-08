@@ -34,6 +34,10 @@ bool theta_cmp(Vec6f a, Vec6f b) {
     return a[3] < b[3];
 }
 
+bool size_cmp(vector<Vec6f> a, vector<Vec6f> b) {
+    return a.size() < b.size();
+}
+
 void k_0_drawAverlines(vector<Vec6f> oneLine, Mat &singleLine, vector<Vec6f> &linesAver) {
     float a = 0;
     float b = 0;
@@ -136,23 +140,74 @@ Vec6f meaningLineAngle(vector<Vec6f> linesCount, float dAngle) {
     return averLines(meaningCount);
 }
 
-vector<vector<Vec6f>> divideLines(vector<Vec6f> k_0_linesCount, int dataNmber, float DValue) {
-    vector<vector<Vec6f>> k_0_allLines;
-    vector<Vec6f> k_0_oneLine;//本来是同一条线的集合
-    if (k_0_linesCount.size() == 0)
-        return k_0_allLines;
-    k_0_oneLine.push_back(k_0_linesCount[0]);
-    for (size_t i = 1; i < k_0_linesCount.size(); i++) {
-        if (abs(k_0_linesCount[i][dataNmber] - k_0_linesCount[i - 1][dataNmber]) > DValue) {
-            k_0_allLines.push_back(k_0_oneLine);
+vector<vector<Vec6f>> divideAngleLines(vector<Vec6f> linesCount, float DValue, float cValue) {
+    sort(linesCount.begin(), linesCount.end(), theta_cmp);
+    vector<vector<Vec6f>> allLines;
+    vector<Vec6f> oneLine;//本来是同一条线的集合
+    size_t j = 0;
+    for (size_t i = 0; i < linesCount.size(); i++) {
+        //cout << DValue << ":" << linesCount[i][3] << endl;
+        if (abs(linesCount[i][3] - linesCount[j][3]) > DValue) {
+            allLines.push_back(oneLine);
             //k_0_drawAverlines(k_0_oneLine, singleLine,linesAver);
-            k_0_oneLine.clear();
-            k_0_oneLine.push_back(k_0_linesCount[i]);
+            oneLine.clear();
+            j = i;
+            oneLine.push_back(linesCount[i]);
+        } else if (i == linesCount.size() - 1) {
+            oneLine.push_back(linesCount[i]);
+            allLines.push_back(oneLine);
         } else {
-            k_0_oneLine.push_back(k_0_linesCount[i]);
+            oneLine.push_back(linesCount[i]);
         }
     }
-    return k_0_allLines;
+    //任意相邻的两块应该合成一块
+    vector<vector<Vec6f>> res;
+    vector<vector<int>> closeZone;
+    res.push_back(allLines[0]);
+    for (int i = 0; i < allLines.size() - 1; i++) {
+        oneLine.clear();
+        int i1 = i + 1;
+        float d = abs(allLines[i].back()[3] - allLines[i1].front()[3]);
+        if (d > 90)
+            d = 180 - d;
+        if (d < cValue) {
+            auto oneV = res.end() - 1;
+            (*oneV).insert((*oneV).end(), allLines[i1].begin(), allLines[i1].end());
+            sort((*oneV).begin(), (*oneV).end(), theta_cmp);
+        } else
+            res.push_back(allLines[i1]);
+    }
+    float d = abs(res.back().back()[3] - res.front().front()[3]);
+    if (d > 90)
+        d = 180 - d;
+    if (d < cValue) {
+        auto oneV = res.end() - 1;
+        (*oneV).insert((*oneV).end(), res[0].begin(), res[0].end());
+        sort((*oneV).begin(), (*oneV).end(), theta_cmp);
+        res.erase(res.begin());
+    }
+    return res;
+}
+
+vector<vector<Vec6f>> divideLines(vector<Vec6f> linesCount, int dataNmber, float DValue) {
+    vector<vector<Vec6f>> allLines;
+    vector<Vec6f> oneLine;//本来是同一条线的集合
+    size_t j = 0;
+    for (size_t i = 0; i < linesCount.size(); i++) {
+        if (abs(linesCount[i][dataNmber] - linesCount[j][dataNmber]) > DValue) {
+            allLines.push_back(oneLine);
+            //k_0_drawAverlines(k_0_oneLine, singleLine,linesAver);
+            oneLine.clear();
+            j = i;
+            oneLine.push_back(linesCount[i]);
+        } else if (i == linesCount.size() - 1) {
+            oneLine.push_back(linesCount[i]);
+            allLines.push_back(oneLine);
+        } else {
+            oneLine.push_back(linesCount[i]);
+        }
+    }
+    return allLines;
 }
 
 float CalculateAngle(float a, float b) {
@@ -296,6 +351,7 @@ int main() {
     Mat imageLines = Mat::zeros(imageContours.size(), CV_8UC1);
     LineFinder finder;
     vector<Vec4i> lines = finder.findLines(imageContours, imageLines);
+    cout << "sum:" << lines.size() << endl;
     //    imshow("imageLines", imageLines);
     //    vector<Vec4i> lines = finder.findLines(imageContours);
     //    for(size_t i = 0; i < lines.size(); i++)
@@ -306,7 +362,7 @@ int main() {
     //    imshow("[imageContours]",imageContours);
     vector<Vec6f> k_0_linesCount;
     vector<Vec6f> k_small_linesCount_no_0;//ax+by+c=0   第一位a，第二位是b，第三位是c，第四位是角度
-    vector<Vec6f> k_large_linesCount;//ax+by+c=0   第一位a，第二位是b，第三位是c，第四位是角度
+    vector<Vec6f> linesCount;//ax+by+c=0   第一位a，第二位是b，第三位是c，第四位是角度
     vector<Vec6f> linesAver;
 
     for (size_t i = 0; i < lines.size(); i++) {
@@ -327,47 +383,53 @@ int main() {
         {
             x = 0;//not exist
             Vec6f temp(a, b, c, angle, x, y);
-            k_0_linesCount.push_back(temp);
+            linesCount.push_back(temp);
         } else if (angle > 45 || angle < -45) {
             if (angle == 90) {
                 y = 0;//not exist
                 Vec6f temp(a, b, c, angle, x, y);
-                k_large_linesCount.push_back(temp);
+                linesCount.push_back(temp);
             } else {
                 Vec6f temp(a, b, c, angle, x, y);
-                k_large_linesCount.push_back(temp);
+                linesCount.push_back(temp);
             }
         } else {
             Vec6f temp(a, b, c, angle, x, y);
-            k_small_linesCount_no_0.push_back(temp);
+            linesCount.push_back(temp);
         }
     }
-    sort(k_large_linesCount.begin(), k_large_linesCount.end(), x_cmp);//按x轴截距排序加一个角度限制，否则出现角度在45-135且x截距相同的
-    sort(k_0_linesCount.begin(), k_0_linesCount.end(), y_cmp);//按y轴截距排序
-    sort(k_small_linesCount_no_0.begin(), k_small_linesCount_no_0.end(), y_cmp);//按y轴截距排序
-
     Mat singleLine = perspSmall.clone();
-    int minSum = 5;
-    //k = 0
-    vector<vector<Vec6f>> k_0_allLines = divideLines(k_0_linesCount, 5, mindiffer);
-    for (auto &k0Line:k_0_allLines) {
-        if (k0Line.size() > 1)
-            linesAver.push_back(averLines(k0Line));
-    }
+
     //45 < k <= 90 || -90 <= k < -45
-    vector<vector<Vec6f>> k_large_allLines = divideLines(k_large_linesCount, 4, mindiffer);
+    vector<vector<Vec6f>> allLines = divideAngleLines(linesCount, 6, 2);
+    sort(allLines.begin(), allLines.end(), size_cmp);
+    int maxL = 4;
+    int maxLA = 2;
+    maxLA= static_cast<int>(maxLA > allLines.size() ? allLines.size() : maxLA);
+    for (auto il = allLines.rbegin(); il < allLines.rbegin() + maxLA; il++) {
 
-    for (auto &largeLine: k_large_allLines) {
-        if (largeLine.size() > minSum)
-            linesAver.push_back(meaningLineAngle(largeLine, 15));
+        vector<Vec6f> largeLine = *il;
+        cout << "l:" << largeLine.size() << endl;
+
+        //divide again by x or y
+        vector<vector<Vec6f>> oLines;
+        cout << "fuck" << largeLine.back()[3] << endl;
+        if (largeLine.back()[3] < 45 && largeLine.front()[3] > -45) {
+            sort(largeLine.begin(), largeLine.end(), y_cmp);
+            oLines = divideLines(largeLine, 5, 20);
+        } else {
+            sort(largeLine.begin(), largeLine.end(), x_cmp);
+            oLines = divideLines(largeLine, 4, 20);
+        }
+        sort(oLines.begin(), oLines.end(), size_cmp);
+        reverse(oLines.begin(), oLines.end());
+        for (int j=0;(j<maxL)&&(j<oLines.size());j++) {
+                linesAver.push_back(averLines(oLines[j]));
+        }
+
+
     }
 
-    //k小
-    vector<vector<Vec6f>> k_small_allLines_no_0 = divideLines(k_small_linesCount_no_0, 5, mindiffer);
-    for (auto &smallLine:k_small_allLines_no_0) {
-        if (smallLine.size() > 3)
-            linesAver.push_back(averLines(smallLine));
-    }
     //画平均线
     for (size_t i = 0; i < linesAver.size(); i++) {
         drawLine(linesAver[i], singleLine);
