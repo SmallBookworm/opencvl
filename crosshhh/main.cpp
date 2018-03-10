@@ -399,18 +399,15 @@ int main() {
         }
     }
     Mat singleLine = perspSmall.clone();
-
     //45 < k <= 90 || -90 <= k < -45
     vector<vector<Vec6f>> allLines = divideAngleLines(linesCount, 6, 2);
     sort(allLines.begin(), allLines.end(), size_cmp);
     int maxL = 4;
     int maxLA = 2;
-    maxLA= static_cast<int>(maxLA > allLines.size() ? allLines.size() : maxLA);
+    maxLA = static_cast<int>(maxLA > allLines.size() ? allLines.size() : maxLA);
     for (auto il = allLines.rbegin(); il < allLines.rbegin() + maxLA; il++) {
-
         vector<Vec6f> largeLine = *il;
         cout << "l:" << largeLine.size() << endl;
-
         //divide again by x or y
         vector<vector<Vec6f>> oLines;
         cout << "fuck" << largeLine.back()[3] << endl;
@@ -423,11 +420,9 @@ int main() {
         }
         sort(oLines.begin(), oLines.end(), size_cmp);
         reverse(oLines.begin(), oLines.end());
-        for (int j=0;(j<maxL)&&(j<oLines.size());j++) {
-                linesAver.push_back(averLines(oLines[j]));
+        for (int j = 0; (j < maxL) && (j < oLines.size()); j++) {
+            linesAver.push_back(averLines(oLines[j]));
         }
-
-
     }
 
     //画平均线

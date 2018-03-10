@@ -70,7 +70,7 @@ int main() {
     //以下是摄像机标定
     cout << "开始标定………………";
     /*棋盘三维信息*/
-    Size square_size = Size(10, 10);  /* 实际测量得到的标定板上每个棋盘格的大小 */
+    Size square_size = Size(100, 100);  /* 实际测量得到的标定板上每个棋盘格的大小 */
     vector<vector<Point3f>> object_points; /* 保存标定板上角点的三维坐标 */
     /*内外参数*/
     Mat cameraMatrix = Mat(3, 3, CV_32FC1, Scalar::all(0)); /* 摄像机内参数矩阵 */
@@ -162,7 +162,7 @@ int main() {
     initUndistortRectifyMap(cameraMatrix,
                             distCoeffs, R, cameraMatrix, image_size, CV_32FC1, mapx, mapy);
     std::cout << "矫正图像" << endl;
-    Mat imageSource = imread("/home/peng/下载/棋盘/棋盘2.jpg");
+    Mat imageSource = imread("/home/peng/图片/Webcam/2018-03-09-162544.jpg");
     Mat newimage = imageSource.clone();
     remap(imageSource, newimage, mapx, mapy, INTER_LINEAR);
     imshow("finish",newimage);
