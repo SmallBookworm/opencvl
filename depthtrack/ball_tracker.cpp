@@ -342,7 +342,7 @@ int Tracker::passCF() {
         xs.clear();
         ys.clear();
         for (int j = 0; j < size; ++j) {
-            xs.push_back(static_cast<float &&>(this->ballInfo[j][2] * bc));
+            xs.push_back(static_cast<float &&>(this->realCoordinates[j][2] * bc));
             ys.push_back(this->realCoordinates[j][1]);
         }
         Vec3f func2 = this->x2curveFitting(xs, ys);
@@ -351,7 +351,7 @@ int Tracker::passCF() {
 
         float br = this->ballCoordinates.back()[2];
         float bdepth = this->ballInfo.back()[2];
-        //512x424
+        //512x424,compute ball real radius
         double realR = br / 256 * bdepth * tan((57.5 / 2) / 180 * M_PI);
         if (realR + dis < this->rRingR)
             return 1;
