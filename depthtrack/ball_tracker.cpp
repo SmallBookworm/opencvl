@@ -323,12 +323,15 @@ int Tracker::getRing(std::vector<std::vector<cv::Point>> contours, cv::Mat &resu
 int Tracker::passCF() {
     unsigned long size = this->ballInfo.size();
     if (size > 2) {
-        //x,y,z
+        //ball coordinates in ring's plane (x,y,z)
         Vec3f point;
         point[2] = this->ring[3];
+
         vector<float> xs, ys;
         for (int i = 0; i < size; ++i) {
+            //x
             xs.push_back(this->realCoordinates[i][0]);
+            //z
             ys.push_back(this->realCoordinates[i][2]);
         }
         vector<float> func1 = this->curveFitting(xs, ys, 1);
@@ -361,6 +364,7 @@ int Tracker::passCF() {
 //-1 no ball,0 ball run,1 pass,2 not pass
 int Tracker::isPassed(cv::Mat &frame) {
     vector<vector<Point>> contours = this->findForegroundContours(frame, 1);
+    //get ring data
     if (this->ring[0] < 0) {
 //       Mat ringR = frame.clone();
 //            imshow("ring", ringR);
@@ -383,10 +387,12 @@ int Tracker::isPassed(cv::Mat &frame) {
         }
         return res;
     }
+    //test
     namedWindow("ball", 0);
     resizeWindow("ball", 640, 480);
     imshow("ball", result);
     usleep(100000);
+    //judge result when ball passed ring's plane
     Vec3f info0 = this->ballInfo.back();
     if (info0[2] >= this->ring[3]) {
         //double dis = this->distance<float>(info0[0], this->ring[0], info0[1], this->ring[1]);
@@ -449,23 +455,26 @@ bool Protonect::protonect_shutdown = false;
 
 // move-constructible function object (i.e., an object whose class defines operator(), including closures and function objects).
 void Tracker::operator()(std::future<int> &fut) {
+    //open kinect
     if (this->protonect.connect() < 0) {
         return;
     }
     this->protonect.start();
+
     libfreenect2::FrameMap frames;
     Mat depthmat;
     future_status status;
     do {
+        //get frame data
         protonect.listener->waitForNewFrame(frames);
         libfreenect2::Frame *rgb = frames[libfreenect2::Frame::Color];
         libfreenect2::Frame *ir = frames[libfreenect2::Frame::Ir];
         libfreenect2::Frame *depth = frames[libfreenect2::Frame::Depth];
 
         cv::Mat(depth->height, depth->width, CV_32FC1, depth->data).copyTo(depthmat);
-        //main
         ++this->frameI;
         cout << "frame:" << this->frameI << endl;
+        //compute result
         int pas = this->isPassed(depthmat);
         switch (pas) {
             case -1:
@@ -481,13 +490,12 @@ void Tracker::operator()(std::future<int> &fut) {
                 cout << "\033[32m" << "fail!" << "\033[0m" << endl;
                 break;
         }
-        //main
         //test
         cv::imshow("depth", depthmat / 4500.0f);
         int key = cv::waitKey(1);
+        //shutdown when kinect error or main thread request
         Protonect::protonect_shutdown =
                 Protonect::protonect_shutdown || (key > 0 && ((key & 0xFF) == 27)); // shutdown on escape
-
         protonect.listener->release(frames);
         status = fut.wait_for(chrono::milliseconds(1));
     } while (!Protonect::protonect_shutdown && (status != future_status::ready));
