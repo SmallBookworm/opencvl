@@ -4,6 +4,6 @@ project(cross)
 set(CMAKE_CXX_STANDARD 11)
 
 find_package( OpenCV REQUIRED )
-set(SOURCE_FILES main.cpp)
+set(SOURCE_FILES main.cpp LineTracker.cpp LineTracker.h LineFinder.cpp LineFinder.h)
 add_executable(cross ${SOURCE_FILES})
 TARGET_LINK_LIBRARIES(cross ${OpenCV_LIBS})
