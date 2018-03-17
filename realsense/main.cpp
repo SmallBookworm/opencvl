@@ -17,11 +17,12 @@ int main(int argc, char * argv[]) try
     using namespace cv;
     const auto window_name = "Display Image";
     namedWindow(window_name, WINDOW_AUTOSIZE);
-
-    while (waitKey(1) < 0 && cvGetWindowHandle(window_name))
+    bool contFlag=true;
+    while (contFlag)
     {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
-        rs2::frame depth = color_map(data.get_depth_frame());
+        rs2::depth_frame depthFrame=data.get_depth_frame();
+        rs2::frame depth = color_map(depthFrame);
 
         // Query frame size (width and height)
         const int w = depth.as<rs2::video_frame>().get_width();
@@ -29,9 +30,9 @@ int main(int argc, char * argv[]) try
 
         // Create OpenCV matrix of size (w,h) from the colorized depth data
         Mat image(Size(w, h), CV_8UC3, (void*)depth.get_data(), Mat::AUTO_STEP);
-
         // Update the window with new data
         imshow(window_name, image);
+        contFlag=waitKey(1)<0;
     }
 
     return EXIT_SUCCESS;
