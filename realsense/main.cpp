@@ -9,7 +9,6 @@
 int thr() try {
     // Declare depth colorizer for pretty visualization of depth data
     rs2::colorizer color_map;
-
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     rs2::pipeline pipe;
     // Start streaming with default recommended configuration
@@ -52,5 +51,6 @@ using namespace std;
 int main(int argc, char *argv[]) {
     thread th1(thr);
     th1.detach();
+    getchar();
     return EXIT_SUCCESS;
 }

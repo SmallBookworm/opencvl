@@ -157,6 +157,8 @@ float Tracker::getCircleDepth(cv::Vec4f circle, rs2::depth_frame depthFrame) {
         int minX = static_cast<int>(ceil(circle[0] - sqrt(squareX)));
         for (int j = minX; j < maxX; ++j) {
             float depth = depthFrame.get_distance(j, i);
+            if (depth <= 0)
+                continue;
             //test
             //cout << "point" << i << "," << j << ":" << depth << endl;
             result += depth;
@@ -352,8 +354,8 @@ int Tracker::passCF() {
 
         float br = this->ballCoordinates.back()[2];
         float bdepth = this->ballInfo.back()[2];
-        //512x424,compute ball real radius
-        double realR = br / 256 * bdepth * tan((57.5 / 2) / 180 * M_PI);
+        //1280,compute ball real radius
+        double realR = br / 640 * bdepth * tan((57.5 / 2) / 180 * M_PI);
         if (realR + dis < this->rRingR)
             return 1;
         else
@@ -470,6 +472,7 @@ int Tracker::operator()(std::future<int> &fut) try {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
         rs2::depth_frame depthFrame = data.get_depth_frame();
         rs2::frame depth = color_map(depthFrame);
+        rs2::frame ir = data.get_infrared_frame();
         ++this->frameI;
         cout << "frame:" << this->frameI << endl;
         // Query frame size (width and height)
@@ -477,7 +480,7 @@ int Tracker::operator()(std::future<int> &fut) try {
         const int h = depth.as<rs2::video_frame>().get_height();
         cout << w << "  " << h << "f:" << depthFrame.get_width() << "  " << depthFrame.get_height() << endl;
         // Create OpenCV matrix of size (w,h) from the colorized depth data
-        Mat image(Size(w, h), CV_8UC3, (void *) depth.get_data(), Mat::AUTO_STEP);
+        Mat image(Size(w, h), CV_16UC1, (void *) ir.get_data(), Mat::AUTO_STEP);
         //compute result
         int pas = this->isPassed(image, depthFrame);
         switch (pas) {
