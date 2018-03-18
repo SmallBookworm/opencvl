@@ -138,26 +138,25 @@ Vec4f Tracker::getEdgeCircle(std::vector<Point> contour) {
 cv::Vec3f Tracker::getCircleCoordinate(cv::Vec4f circle, cv::Vec3f info, int wWidth, int wHeight) {
     Vec3f coordinate;
     coordinate[2] = info[2];
-    coordinate[0] = static_cast<float>(info[2] * tan((57.5 / 2) / 180 * M_PI) * (wWidth / 2 - circle[0]) /
+    coordinate[0] = static_cast<float>(info[2] * tan((64 / 2) / 180 * M_PI) * (wWidth / 2 - circle[0]) /
                                        (wWidth / 2));
-    coordinate[1] = static_cast<float>(info[2] * tan((43.5 / 2) / 180 * M_PI) * (wHeight / 2 - circle[1]) /
+    coordinate[1] = static_cast<float>(info[2] * tan((41 / 2) / 180 * M_PI) * (wHeight / 2 - circle[1]) /
                                        (wHeight / 2));
     return coordinate;
 }
 
-float Tracker::getCircleDepth(cv::Vec4f circle, cv::Mat &depthMat) {
+float Tracker::getCircleDepth(cv::Vec4f circle, rs2::depth_frame depthFrame) {
     float result = 0;
     int count = 0;
     float a = circle[2] / 2;
-    if ((circle[0] + circle[2]) >= depthMat.cols || (circle[1] + circle[2]) >= depthMat.rows)
+    if ((circle[0] + circle[2]) >= depthFrame.get_width() || (circle[1] + circle[2]) >= depthFrame.get_height())
         return -1;
     for (int i = static_cast<int>(ceil(circle[1] - a)); i < circle[1] + a; ++i) {
         double squareX = pow(a, 2) - pow(i - circle[1], 2);
         int maxX = static_cast<int>(sqrt(squareX) + circle[0]);
         int minX = static_cast<int>(ceil(circle[0] - sqrt(squareX)));
         for (int j = minX; j < maxX; ++j) {
-            this->primitiveDepth.get_distance(j,i);
-            float depth = depthMat.at<float>(i,j);
+            float depth = depthFrame.get_distance(j, i);
             //test
             //cout << "point" << i << "," << j << ":" << depth << endl;
             result += depth;
@@ -194,7 +193,8 @@ float Tracker::selectROIDepth(std::string windowName, cv::Mat &depthMat) {
     return depthMat.at<T>(rect.tl());
 }
 
-cv::Vec4f Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage) {
+cv::Vec4f
+Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage, rs2::depth_frame depthFrame) {
     bool minI = false;
     Vec4f minC;
     Vec3f realC;
@@ -241,7 +241,7 @@ cv::Vec4f Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &re
         if (circle[2] < minR)
             continue;
 
-        float depth = this->getCircleDepth(circle, resultImage);
+        float depth = this->getCircleDepth(circle, depthFrame);
         if (isnan(depth) || depth < 0)
             continue;
 
@@ -363,7 +363,7 @@ int Tracker::passCF() {
 }
 
 //-1 no ball,0 ball run,1 pass,2 not pass
-int Tracker::isPassed(cv::Mat &frame) {
+int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     vector<vector<Point>> contours = this->findForegroundContours(frame, 1);
     //get ring data
     if (this->ring[0] < 0) {
@@ -376,7 +376,7 @@ int Tracker::isPassed(cv::Mat &frame) {
         this->rRingR = static_cast<float>(this->ring[2] / 256 * this->ring[3] * tan((57.5 / 2) / 180 * M_PI));
     }
     Mat result = frame.clone();
-    Vec4f circle = getBall(contours, result);
+    Vec4f circle = getBall(contours, result, depthFrame);
     // restart when no ball in 5 frames
     if (circle[0] < 0) {
         int res = -1;
@@ -408,49 +408,49 @@ int Tracker::isPassed(cv::Mat &frame) {
     return 0;
 }
 
-void Tracker::test() {
-    vector<float> x = {0, 1, 2}, y = {2, 1, -2};
-    cout << this->x2curveFitting(x, y) << endl;
-
-    VideoCapture videoCapture("/home/peng/下载/ball_pass_ring(5)/depth(pass3).avi");
-    if (!videoCapture.isOpened()) {
-        perror("open video fail!");
-        return;
-    }
-
-    Mat frame;
-    this->frameI = 0;
-    while (videoCapture.isOpened()) {
-        videoCapture >> frame;
-        if (frame.empty())
-            break;
-        ++this->frameI;
-        if (this->frameI < 0 || this->frameI > 1000)
-            continue;
-        cout << this->frameI << endl;
-        if (this->frameI == 99)
-            imshow("97", frame);
-        int pas = this->isPassed(frame);
-        switch (pas) {
-            case -1:
-                cerr << "no ball!" << endl;
-                break;
-            case 0:
-                cout << "\033[33m" << "run" << "\033[0m" << endl;
-                break;
-            case 1:
-                cout << "\033[32m" << "success!" << "\033[0m" << endl;
-                break;
-            case 2:
-                cout << "\033[32m" << "fail!" << "\033[0m" << endl;
-                break;
-        }
-
-        if (waitKey(1) == 27)
-            break;
-    }
-
-}
+//void Tracker::test() {
+//    vector<float> x = {0, 1, 2}, y = {2, 1, -2};
+//    cout << this->x2curveFitting(x, y) << endl;
+//
+//    VideoCapture videoCapture("/home/peng/下载/ball_pass_ring(5)/depth(pass3).avi");
+//    if (!videoCapture.isOpened()) {
+//        perror("open video fail!");
+//        return;
+//    }
+//
+//    Mat frame;
+//    this->frameI = 0;
+//    while (videoCapture.isOpened()) {
+//        videoCapture >> frame;
+//        if (frame.empty())
+//            break;
+//        ++this->frameI;
+//        if (this->frameI < 0 || this->frameI > 1000)
+//            continue;
+//        cout << this->frameI << endl;
+//        if (this->frameI == 99)
+//            imshow("97", frame);
+//        int pas = this->isPassed(frame);
+//        switch (pas) {
+//            case -1:
+//                cerr << "no ball!" << endl;
+//                break;
+//            case 0:
+//                cout << "\033[33m" << "run" << "\033[0m" << endl;
+//                break;
+//            case 1:
+//                cout << "\033[32m" << "success!" << "\033[0m" << endl;
+//                break;
+//            case 2:
+//                cout << "\033[32m" << "fail!" << "\033[0m" << endl;
+//                break;
+//        }
+//
+//        if (waitKey(1) == 27)
+//            break;
+//    }
+//
+//}
 
 
 // move-constructible function object (i.e., an object whose class defines operator(), including closures and function objects).
@@ -469,18 +469,17 @@ int Tracker::operator()(std::future<int> &fut) try {
     while (contFlag) {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
         rs2::depth_frame depthFrame = data.get_depth_frame();
-        this->primitiveDepth = depthFrame;
         rs2::frame depth = color_map(depthFrame);
         ++this->frameI;
         cout << "frame:" << this->frameI << endl;
         // Query frame size (width and height)
         const int w = depth.as<rs2::video_frame>().get_width();
         const int h = depth.as<rs2::video_frame>().get_height();
-
+        cout << w << "  " << h << "f:" << depthFrame.get_width() << "  " << depthFrame.get_height() << endl;
         // Create OpenCV matrix of size (w,h) from the colorized depth data
         Mat image(Size(w, h), CV_8UC3, (void *) depth.get_data(), Mat::AUTO_STEP);
         //compute result
-        int pas = this->isPassed(image);
+        int pas = this->isPassed(image, depthFrame);
         switch (pas) {
             case -1:
                 cerr << "no ball!" << endl;

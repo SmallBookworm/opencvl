@@ -23,7 +23,6 @@ public:
 
 private:
     int frameI;
-    rs2::depth_frame primitiveDepth;
     //x,y,r,score
     std::vector<cv::Vec4f> ballCoordinates;
     //x,y,z
@@ -53,7 +52,7 @@ private:
 
     int passCF();
 
-    int isPassed(cv::Mat &frame);
+    int isPassed(cv::Mat &frame, rs2::depth_frame depthFrame);
 
     std::vector<std::vector<cv::Point>> findAllContours(cv::Mat &input);
 
@@ -66,7 +65,7 @@ private:
 
     std::vector<cv::RotatedRect> getRotatedRect(std::vector<std::vector<cv::Point>>);
 
-    cv::Vec4f getBall(std::vector<std::vector<cv::Point>> contours, cv::Mat &result);
+    cv::Vec4f getBall(std::vector<std::vector<cv::Point>> contours, cv::Mat &result, rs2::depth_frame depthFrame);
 
     int getRing(std::vector<std::vector<cv::Point>> contours, cv::Mat &result);
 
@@ -76,7 +75,7 @@ private:
     template<typename T>
     float selectROIDepth(std::string windowName, cv::Mat &depthMat);
 
-    float getCircleDepth(cv::Vec4f circle, cv::Mat &depthMat);
+    float getCircleDepth(cv::Vec4f circle, rs2::depth_frame depthFrame);
 
     template<typename T>
     float getRectDepth(cv::Rect circle, cv::Mat &depthMat);
