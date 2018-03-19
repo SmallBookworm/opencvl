@@ -17,7 +17,7 @@ endif ()
 
 find_package(OpenCV REQUIRED)
 set(DEPENDENCIES realsense2 ${OpenCV_LIBS})
-add_executable(rs-imshow main.cpp)
+add_executable(rs-imshow main.cpp cv-helpers.hpp)
 target_link_libraries(rs-imshow ${DEPENDENCIES})
 target_link_libraries(rs-imshow pthread)
 set_target_properties(rs-imshow PROPERTIES
