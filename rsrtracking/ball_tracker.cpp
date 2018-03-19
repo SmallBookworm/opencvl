@@ -4,6 +4,7 @@
 
 
 #include "ball_tracker.h"
+#include "cv-helpers.hpp"
 
 using namespace std;
 using namespace cv;
@@ -149,7 +150,8 @@ float Tracker::getCircleDepth(cv::Vec4f circle, rs2::depth_frame depthFrame) {
     float result = 0;
     int count = 0;
     float a = circle[2] / 2;
-    if ((circle[0] + circle[2]) >= depthFrame.get_width() || (circle[1] + circle[2]) >= depthFrame.get_height())
+    if ((circle[0] + circle[2]) >= depthFrame.get_width() || (circle[1] + circle[2]) >= depthFrame.get_height()||
+            (circle[0] - circle[2])<0||(circle[1] - circle[2])<0)
         return -1;
     for (int i = static_cast<int>(ceil(circle[1] - a)); i < circle[1] + a; ++i) {
         double squareX = pow(a, 2) - pow(i - circle[1], 2);
@@ -462,6 +464,8 @@ int Tracker::operator()(std::future<int> &fut) try {
 
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     rs2::pipeline pipe;
+    //config
+    rs2_config config();
     // Start streaming with default recommended configuration
     pipe.start();
 
@@ -472,7 +476,7 @@ int Tracker::operator()(std::future<int> &fut) try {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
         rs2::depth_frame depthFrame = data.get_depth_frame();
         rs2::frame depth = color_map(depthFrame);
-        rs2::frame ir = data.get_infrared_frame();
+        rs2::frame ir = data.get_color_frame();
         ++this->frameI;
         cout << "frame:" << this->frameI << endl;
         // Query frame size (width and height)
@@ -480,7 +484,7 @@ int Tracker::operator()(std::future<int> &fut) try {
         const int h = depth.as<rs2::video_frame>().get_height();
         cout << w << "  " << h << "f:" << depthFrame.get_width() << "  " << depthFrame.get_height() << endl;
         // Create OpenCV matrix of size (w,h) from the colorized depth data
-        Mat image(Size(w, h), CV_16UC1, (void *) ir.get_data(), Mat::AUTO_STEP);
+        Mat image=frame_to_mat(depth);
         //compute result
         int pas = this->isPassed(image, depthFrame);
         switch (pas) {
@@ -498,12 +502,13 @@ int Tracker::operator()(std::future<int> &fut) try {
                 break;
         }
         // Update the window with new data
-        imshow(window_name, image);
+        imshow(window_name, frame_to_mat(ir));
         contFlag = waitKey(1) < 0;
     }
 
     return EXIT_SUCCESS;
-} catch (const rs2::error &e) {
+}
+catch (const rs2::error &e) {
     std::cerr << "RealSense error calling " << e.get_failed_function() << "(" << e.get_failed_args() << "):\n    "
               << e.what() << std::endl;
     return EXIT_FAILURE;

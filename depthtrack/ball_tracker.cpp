@@ -149,7 +149,8 @@ float Tracker::getCircleDepth(cv::Vec4f circle, cv::Mat &depthMat) {
     float result = 0;
     int count = 0;
     float a = circle[2] / 2;
-    if ((circle[0] + circle[2]) >= depthMat.cols || (circle[1] + circle[2]) >= depthMat.rows)
+    if ((circle[0] + circle[2]) >= depthFrame.get_width() || (circle[1] + circle[2]) >= depthFrame.get_height()||
+        (circle[0] - circle[2])<0||(circle[1] - circle[2])<0)
         return -1;
     for (int i = static_cast<int>(ceil(circle[1] - a)); i < circle[1] + a; ++i) {
         double squareX = pow(a, 2) - pow(i - circle[1], 2);
@@ -157,6 +158,8 @@ float Tracker::getCircleDepth(cv::Vec4f circle, cv::Mat &depthMat) {
         int minX = static_cast<int>(ceil(circle[0] - sqrt(squareX)));
         for (int j = minX; j < maxX; ++j) {
             float depth = depthMat.at<float>(i, j);
+            if (depth <= 0)
+                continue;
             //test
             //cout << "point" << i << "," << j << ":" << depth << endl;
             result += depth;

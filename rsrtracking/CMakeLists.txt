@@ -7,5 +7,5 @@ set(CMAKE_CXX_STANDARD 11)
 
 find_package(OpenCV REQUIRED)
 set(DEPENDENCIES realsense2 ${OpenCV_LIBS})
-add_executable(rsrtracking main.cpp ball_tracker.cpp)
+add_executable(rsrtracking main.cpp ball_tracker.cpp cv-helpers.hpp)
 target_link_libraries(rsrtracking ${DEPENDENCIES} pthread)
