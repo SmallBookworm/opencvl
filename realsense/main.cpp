@@ -24,13 +24,12 @@ int thr() try {
     // Start streaming with default recommended configuration
     pipe.start(cfg);
 
-    using namespace cv;
     const auto window_name = "Display Image";
     namedWindow(window_name, WINDOW_AUTOSIZE);
     bool contFlag = true;
     string name = "0";
-//    VideoWriter vDepth("/home/peng/下载/realse/depth" + name+ ".avi", CV_FOURCC('M', 'J', 'P', 'G'), 60, Size(848, 480), false);
-//    VideoWriter vIr("/home/peng/下载/realse/ir" + name+ ".avi", CV_FOURCC('M', 'J', 'P', 'G'), 60, Size(848, 480), false);
+   // VideoWriter vDepth("/home/peng/下载/realse/depth" + name+ ".avi", CV_FOURCC('M', 'J', 'P', 'G'), 60, Size(848, 480), false);
+  //  VideoWriter vIr("/home/peng/下载/realse/ir" + name+ ".avi", CV_FOURCC('M', 'J', 'P', 'G'), 60, Size(848, 480), false);
 //    VideoWriter vColor("/home/peng/下载/realse/color" + name+ ".avi", CV_FOURCC('M', 'J', 'P', 'G'), 60, Size(848, 480), true);
     while (contFlag) {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera

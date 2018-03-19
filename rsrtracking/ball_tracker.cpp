@@ -150,8 +150,8 @@ float Tracker::getCircleDepth(cv::Vec4f circle, rs2::depth_frame depthFrame) {
     float result = 0;
     int count = 0;
     float a = circle[2] / 2;
-    if ((circle[0] + circle[2]) >= depthFrame.get_width() || (circle[1] + circle[2]) >= depthFrame.get_height()||
-            (circle[0] - circle[2])<0||(circle[1] - circle[2])<0)
+    if ((circle[0] + circle[2]) >= depthFrame.get_width() || (circle[1] + circle[2]) >= depthFrame.get_height() ||
+        (circle[0] - circle[2]) < 0 || (circle[1] - circle[2]) < 0)
         return -1;
     for (int i = static_cast<int>(ceil(circle[1] - a)); i < circle[1] + a; ++i) {
         double squareX = pow(a, 2) - pow(i - circle[1], 2);
@@ -257,6 +257,7 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
         //test
         cout << "depth:" << depth << endl;
         cout << circle << endl;
+        //judge zone when empty.if not,distance.
         if (this->realCoordinates.empty()) {
             if (circle[0] > maxX || circle[0] < minX)
                 continue;
@@ -356,8 +357,8 @@ int Tracker::passCF() {
 
         float br = this->ballCoordinates.back()[2];
         float bdepth = this->ballInfo.back()[2];
-        //1280,compute ball real radius
-        double realR = br / 640 * bdepth * tan((57.5 / 2) / 180 * M_PI);
+        // Horizontal FOV (HD 16:9): 64; Vertical FOV (HD 16:9): 41
+        double realR = br / (this->width / 2) * bdepth * tan((64 / 2) / 180 * M_PI);
         if (realR + dis < this->rRingR)
             return 1;
         else
@@ -393,10 +394,10 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
         return res;
     }
     //test
-    namedWindow("ball", 0);
-    resizeWindow("ball", 640, 480);
+    namedWindow("ball", WINDOW_AUTOSIZE);
+    //resizeWindow("ball", 848, 480);
     imshow("ball", result);
-    usleep(100000);
+    //usleep(100000);
     //judge result when ball passed ring's plane
     Vec3f info0 = this->ballInfo.back();
     if (info0[2] >= this->ring[3]) {
@@ -460,14 +461,18 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
 // move-constructible function object (i.e., an object whose class defines operator(), including closures and function objects).
 int Tracker::operator()(std::future<int> &fut) try {
     // Declare depth colorizer for pretty visualization of depth data
-    rs2::colorizer color_map;
+    //rs2::colorizer color_map;
 
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     rs2::pipeline pipe;
-    //config
-    rs2_config config();
+    //Create a configuration for configuring the pipeline with a non default profile
+    rs2::config cfg;
+    //Add desired streams to configuration
+    cfg.enable_stream(RS2_STREAM_INFRARED, 848, 480, RS2_FORMAT_Y8, 90);
+    cfg.enable_stream(RS2_STREAM_DEPTH, 848, 480, RS2_FORMAT_Z16, 90);
+    //cfg.enable_stream(RS2_STREAM_COLOR, 848, 480, RS2_FORMAT_BGR8, 60);
     // Start streaming with default recommended configuration
-    pipe.start();
+    pipe.start(cfg);
 
     const auto window_name = "Display Image";
     namedWindow(window_name, WINDOW_AUTOSIZE);
@@ -475,16 +480,12 @@ int Tracker::operator()(std::future<int> &fut) try {
     while (contFlag) {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
         rs2::depth_frame depthFrame = data.get_depth_frame();
-        rs2::frame depth = color_map(depthFrame);
-        rs2::frame ir = data.get_color_frame();
+        //rs2::frame depth = color_map(depthFrame);
+        rs2::frame ir = data.get_infrared_frame();
         ++this->frameI;
         cout << "frame:" << this->frameI << endl;
-        // Query frame size (width and height)
-        const int w = depth.as<rs2::video_frame>().get_width();
-        const int h = depth.as<rs2::video_frame>().get_height();
-        cout << w << "  " << h << "f:" << depthFrame.get_width() << "  " << depthFrame.get_height() << endl;
         // Create OpenCV matrix of size (w,h) from the colorized depth data
-        Mat image=frame_to_mat(depth);
+        Mat image = frame_to_mat(ir);
         //compute result
         int pas = this->isPassed(image, depthFrame);
         switch (pas) {

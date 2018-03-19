@@ -34,7 +34,8 @@ private:
     //x,y,z
     cv::Vec3f ringCoordinate;
     float rRingR;
-
+    int width;
+    int height;
     cv::Ptr<cv::BackgroundSubtractorMOG2> pBackgroundKnn = cv::createBackgroundSubtractorMOG2();
 
 
