@@ -74,6 +74,7 @@ vector<vector<Point>> Tracker::findAllContours(Mat &input) {
     Mat element = getStructuringElement(MORPH_RECT, Size(2, 2));
     dilate(frame, frame, element);
 
+    //cvtColor(frame, frame, CV_BGR2GRAY);
     //高斯平滑
     GaussianBlur(frame, frame, Size(9, 9), 0, 0);
 //    imshow("GaussianBlur", frame);
@@ -371,7 +372,7 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     return 0;
 }
 
-int Tracker::test() try {
+int Tracker::test()  {
     // Declare depth colorizer for pretty visualization of depth data
     rs2::colorizer color_map;
 
@@ -380,9 +381,9 @@ int Tracker::test() try {
     //Create a configuration for configuring the pipeline with a non default profile
     rs2::config cfg;
     //Add desired streams to configuration
-    cfg.enable_stream(RS2_STREAM_INFRARED, 848, 480, RS2_FORMAT_Y8, 90);
-    cfg.enable_stream(RS2_STREAM_DEPTH, 848, 480, RS2_FORMAT_Z16, 90);
-    //cfg.enable_stream(RS2_STREAM_COLOR, 848, 480, RS2_FORMAT_BGR8, 60);
+    cfg.enable_stream(RS2_STREAM_INFRARED, 1280, 720, RS2_FORMAT_Y8, 30);
+    cfg.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 30);
+    //cfg.enable_stream(RS2_STREAM_COLOR, 848, 480, RS2_FORMAT_BGR8, 30);
     // Start streaming with default recommended configuration
     pipe.start(cfg);
 
@@ -397,25 +398,16 @@ int Tracker::test() try {
         ++this->frameI;
         cout << "frame:" << this->frameI << endl;
         // Create OpenCV matrix of size (w,h) from the colorized depth data
-        Mat image = frame_to_mat(depth);
+        Mat image = frame_to_mat(ir);
         //compute result
-        vector<vector<cv::Point>> contours=this->findAllContours(image);
-        ringWatcher.getRing(contours,image);
+        vector<vector<cv::Point>> contours = this->findAllContours(image);
+        ringWatcher.getRing(contours, image);
         // Update the window with new data
         imshow(window_name, image);
         contFlag = waitKey(1) < 0;
     }
 
     return EXIT_SUCCESS;
-}
-catch (const rs2::error &e) {
-    std::cerr << "RealSense error calling " << e.get_failed_function() << "(" << e.get_failed_args() << "):\n    "
-              << e.what() << std::endl;
-    return EXIT_FAILURE;
-}
-catch (const std::exception &e) {
-    std::cerr << e.what() << std::endl;
-    return EXIT_FAILURE;
 }
 
 
