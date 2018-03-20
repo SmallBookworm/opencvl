@@ -11,6 +11,7 @@
 #include <future>
 #include <opencv2/opencv.hpp>
 #include <librealsense2/rs.hpp>
+#include "ring_watcher.h"
 
 class Tracker {
 public:
@@ -19,7 +20,7 @@ public:
     //define operator()
     int operator()(std::future<int> &fut);
 
-    void test();
+    int test();
 
 private:
     int frameI;
@@ -29,11 +30,8 @@ private:
     std::vector<cv::Vec3f> realCoordinates;
     //frame,points size,depth,
     std::vector<cv::Vec3f> ballInfo;
-    //x,y,r,depth
-    cv::Vec4f ring;
-    //x,y,z
-    cv::Vec3f ringCoordinate;
-    float rRingR;
+    RingWatcher ringWatcher;
+    //frame
     int width;
     int height;
     cv::Ptr<cv::BackgroundSubtractorMOG2> pBackgroundKnn = cv::createBackgroundSubtractorMOG2();
@@ -67,10 +65,6 @@ private:
     std::vector<cv::RotatedRect> getRotatedRect(std::vector<std::vector<cv::Point>>);
 
     cv::Vec4f getBall(std::vector<std::vector<cv::Point>> contours, cv::Mat &result, rs2::depth_frame depthFrame);
-
-    int getRing(std::vector<std::vector<cv::Point>> contours, cv::Mat &result);
-
-    cv::RotatedRect getRingPole(std::vector<cv::Point> contours);
 
 
     template<typename T>

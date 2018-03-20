@@ -11,7 +11,7 @@ using namespace cv;
 
 Tracker::Tracker() {
     this->frameI = 0;
-    this->ring[0] = -1;
+    ringWatcher.ring[0] = -1;
 }
 
 template<typename T>
@@ -70,10 +70,10 @@ Vec3f Tracker::x2curveFitting(std::vector<float> x, std::vector<float> y) {
 
 vector<vector<Point>> Tracker::findAllContours(Mat &input) {
     Mat frame = input.clone();
-
+    //expansive working
     Mat element = getStructuringElement(MORPH_RECT, Size(2, 2));
     dilate(frame, frame, element);
-    cvtColor(frame, frame, CV_BGR2GRAY);
+
     //高斯平滑
     GaussianBlur(frame, frame, Size(9, 9), 0, 0);
 //    imshow("GaussianBlur", frame);
@@ -170,25 +170,6 @@ float Tracker::getCircleDepth(cv::Vec4f circle, rs2::depth_frame depthFrame) {
     return result / count;
 }
 
-cv::RotatedRect Tracker::getRingPole(std::vector<cv::Point> contours) {
-    vector<cv::Point> pole;
-    RotatedRect rect = minAreaRect(contours);
-    float minY = 1000, maxY = 0;
-    Point2f points[4];
-    rect.points(points);
-    for (auto &point:points) {
-        if (point.y < minY)
-            minY = point.y;
-        else if (point.y > maxY)
-            maxY = point.y;
-    }
-    float min = minY + (maxY - minY) / 3, max = maxY - (maxY - minY) / 3;
-    for (auto &pt:contours) {
-        if (pt.y > min && pt.y < max)
-            pole.push_back(pt);
-    }
-    return minAreaRect(pole);
-}
 
 template<typename T>
 float Tracker::selectROIDepth(std::string windowName, cv::Mat &depthMat) {
@@ -301,37 +282,13 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
     return minC;
 }
 
-int Tracker::getRing(std::vector<std::vector<cv::Point>> contours, cv::Mat &result) {
-    vector<RotatedRect> rects = this->getRotatedRect(contours);
-    for (int i = 0; i < rects.size(); ++i) {
-        if (rects[i].size.height < 150)
-            continue;
-        if (rects[i].size.width > rects[i].size.height / 2)
-            continue;
-        if (rects[i].center.x < 200 || rects[i].center.x > 300)
-            continue;
-        if (rects[i].center.y < result.rows / 2)
-            continue;
-
-        this->ring[0] = 1;
-        RotatedRect ringPole = this->getRingPole(contours[i]);
-        //test
-        Point2f points[4];
-        ringPole.points(points);
-        for (int j = 0; j < 4; ++j) {
-            line(result, points[j], points[(j + 1) % 4], Scalar(0, 255, rects[i].center.y), 1, CV_AA);
-        }
-        break;
-    }
-    return 1;
-}
 
 int Tracker::passCF() {
     unsigned long size = this->ballInfo.size();
     if (size > 2) {
         //ball coordinates in ring's plane (x,y,z)
         Vec3f point;
-        point[2] = this->ring[3];
+        point[2] = ringWatcher.ring[3];
 
         vector<float> xs, ys;
         for (int i = 0; i < size; ++i) {
@@ -353,13 +310,13 @@ int Tracker::passCF() {
         }
         Vec3f func2 = this->x2curveFitting(xs, ys);
         point[1] = static_cast<float>(func2[0] + func2[1] * point[2] * bc + func2[2] * pow(point[2] * bc, 2));
-        double dis = this->realDistance(this->ringCoordinate, point);
+        double dis = this->realDistance(ringWatcher.coordinate, point);
 
         float br = this->ballCoordinates.back()[2];
         float bdepth = this->ballInfo.back()[2];
         // Horizontal FOV (HD 16:9): 64; Vertical FOV (HD 16:9): 41
         double realR = br / (this->width / 2) * bdepth * tan((64 / 2) / 180 * M_PI);
-        if (realR + dis < this->rRingR)
+        if (realR + dis < ringWatcher.r)
             return 1;
         else
             return 2;
@@ -371,14 +328,15 @@ int Tracker::passCF() {
 int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     vector<vector<Point>> contours = this->findForegroundContours(frame, 1);
     //get ring data
-    if (this->ring[0] < 0) {
+    if (ringWatcher.ring[0] < 0) {
 //       Mat ringR = frame.clone();
 //            imshow("ring", ringR);
 //        cout<<"depth:"<<this->selectROIDepth<float>("ring", ringR)<<endl;
 
-        this->ring = Vec4f(357, 159, 35, 4200);
-        this->ringCoordinate = this->getCircleCoordinate(this->ring, Vec3f(0, 0, this->ring[3]));
-        this->rRingR = static_cast<float>(this->ring[2] / 256 * this->ring[3] * tan((57.5 / 2) / 180 * M_PI));
+        ringWatcher.ring = Vec4f(357, 159, 35, 4200);
+        ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]));
+        ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / 256 * ringWatcher.ring[3] *
+                                           tan((57.5 / 2) / 180 * M_PI));
     }
     Mat result = frame.clone();
     Vec4f circle = getBall(contours, result, depthFrame);
@@ -400,9 +358,9 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     //usleep(100000);
     //judge result when ball passed ring's plane
     Vec3f info0 = this->ballInfo.back();
-    if (info0[2] >= this->ring[3]) {
-        //double dis = this->distance<float>(info0[0], this->ring[0], info0[1], this->ring[1]);
-        //bool flag = (dis + info0[2]) < this->ring[2];
+    if (info0[2] >= ringWatcher.ring[3]) {
+        //double dis = this->distance<float>(info0[0], ringWatcher.ring[0], info0[1], ringWatcher.ring[1]);
+        //bool flag = (dis + info0[2]) < ringWatcher.ring[2];
         int res = this->passCF();
         this->ballInfo.clear();
         this->ballCoordinates.clear();
@@ -413,49 +371,51 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     return 0;
 }
 
-//void Tracker::test() {
-//    vector<float> x = {0, 1, 2}, y = {2, 1, -2};
-//    cout << this->x2curveFitting(x, y) << endl;
-//
-//    VideoCapture videoCapture("/home/peng/下载/ball_pass_ring(5)/depth(pass3).avi");
-//    if (!videoCapture.isOpened()) {
-//        perror("open video fail!");
-//        return;
-//    }
-//
-//    Mat frame;
-//    this->frameI = 0;
-//    while (videoCapture.isOpened()) {
-//        videoCapture >> frame;
-//        if (frame.empty())
-//            break;
-//        ++this->frameI;
-//        if (this->frameI < 0 || this->frameI > 1000)
-//            continue;
-//        cout << this->frameI << endl;
-//        if (this->frameI == 99)
-//            imshow("97", frame);
-//        int pas = this->isPassed(frame);
-//        switch (pas) {
-//            case -1:
-//                cerr << "no ball!" << endl;
-//                break;
-//            case 0:
-//                cout << "\033[33m" << "run" << "\033[0m" << endl;
-//                break;
-//            case 1:
-//                cout << "\033[32m" << "success!" << "\033[0m" << endl;
-//                break;
-//            case 2:
-//                cout << "\033[32m" << "fail!" << "\033[0m" << endl;
-//                break;
-//        }
-//
-//        if (waitKey(1) == 27)
-//            break;
-//    }
-//
-//}
+int Tracker::test() try {
+    // Declare depth colorizer for pretty visualization of depth data
+    rs2::colorizer color_map;
+
+    // Declare RealSense pipeline, encapsulating the actual device and sensors
+    rs2::pipeline pipe;
+    //Create a configuration for configuring the pipeline with a non default profile
+    rs2::config cfg;
+    //Add desired streams to configuration
+    cfg.enable_stream(RS2_STREAM_INFRARED, 848, 480, RS2_FORMAT_Y8, 90);
+    cfg.enable_stream(RS2_STREAM_DEPTH, 848, 480, RS2_FORMAT_Z16, 90);
+    //cfg.enable_stream(RS2_STREAM_COLOR, 848, 480, RS2_FORMAT_BGR8, 60);
+    // Start streaming with default recommended configuration
+    pipe.start(cfg);
+
+    const auto window_name = "Display Image";
+    namedWindow(window_name, WINDOW_AUTOSIZE);
+    bool contFlag = true;
+    while (contFlag) {
+        rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
+        rs2::depth_frame depthFrame = data.get_depth_frame();
+        rs2::frame depth = color_map(depthFrame);
+        rs2::frame ir = data.get_infrared_frame();
+        ++this->frameI;
+        cout << "frame:" << this->frameI << endl;
+        // Create OpenCV matrix of size (w,h) from the colorized depth data
+        Mat image = frame_to_mat(depth);
+        //compute result
+        this->findAllContours(image);
+        // Update the window with new data
+        imshow(window_name, image);
+        contFlag = waitKey(1) < 0;
+    }
+
+    return EXIT_SUCCESS;
+}
+catch (const rs2::error &e) {
+    std::cerr << "RealSense error calling " << e.get_failed_function() << "(" << e.get_failed_args() << "):\n    "
+              << e.what() << std::endl;
+    return EXIT_FAILURE;
+}
+catch (const std::exception &e) {
+    std::cerr << e.what() << std::endl;
+    return EXIT_FAILURE;
+}
 
 
 // move-constructible function object (i.e., an object whose class defines operator(), including closures and function objects).
@@ -477,7 +437,8 @@ int Tracker::operator()(std::future<int> &fut) try {
     const auto window_name = "Display Image";
     namedWindow(window_name, WINDOW_AUTOSIZE);
     bool contFlag = true;
-    while (contFlag) {
+    future_status status;
+    do {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
         rs2::depth_frame depthFrame = data.get_depth_frame();
         //rs2::frame depth = color_map(depthFrame);
@@ -503,9 +464,10 @@ int Tracker::operator()(std::future<int> &fut) try {
                 break;
         }
         // Update the window with new data
-        imshow(window_name, frame_to_mat(ir));
+        imshow(window_name, image);
         contFlag = waitKey(1) < 0;
-    }
+        status = fut.wait_for(chrono::milliseconds(1));
+    } while (contFlag && (status != future_status::ready));
 
     return EXIT_SUCCESS;
 }
