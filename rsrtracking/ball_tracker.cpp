@@ -399,7 +399,8 @@ int Tracker::test() try {
         // Create OpenCV matrix of size (w,h) from the colorized depth data
         Mat image = frame_to_mat(depth);
         //compute result
-        this->findAllContours(image);
+        vector<vector<cv::Point>> contours=this->findAllContours(image);
+        ringWatcher.getRing(contours,image);
         // Update the window with new data
         imshow(window_name, image);
         contFlag = waitKey(1) < 0;

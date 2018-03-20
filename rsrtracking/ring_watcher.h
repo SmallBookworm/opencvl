@@ -15,10 +15,11 @@ public:
     //x,y,z
     cv::Vec3f coordinate;
     float r;
-private:
-    std::vector<cv::RotatedRect> getRotatedRect(std::vector<std::vector<cv::Point>>);
 
     int getRing(std::vector<std::vector<cv::Point>> contours, cv::Mat &result);
+
+private:
+    std::vector<cv::RotatedRect> getRotatedRect(std::vector<std::vector<cv::Point>>);
 
     cv::RotatedRect getRingPole(std::vector<cv::Point> contours);
 };
