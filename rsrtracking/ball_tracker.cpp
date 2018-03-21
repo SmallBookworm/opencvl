@@ -172,11 +172,10 @@ float Tracker::getCircleDepth(cv::Vec4f circle, rs2::depth_frame depthFrame) {
 }
 
 
-template<typename T>
-float Tracker::selectROIDepth(std::string windowName, cv::Mat &depthMat) {
+Rect Tracker::selectROIDepth(std::string windowName, cv::Mat &depthMat) {
     Rect rect = selectROI(windowName, depthMat);
     cout << "tl:" << rect.tl() << endl;
-    return depthMat.at<T>(rect.tl());
+    return rect;
 }
 
 cv::Vec4f
@@ -196,8 +195,8 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
         minX = resultImage.cols * 3 / 4;
         minR = 2;
 
-        minD = 500;
-        maxD = 2000;
+        minD = 1.000;
+        maxD = 3.000;
         maxC = 30;
     } else {
         Vec3f info = this->ballInfo.back();
@@ -209,8 +208,8 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
 
         maxDi = 4000 * (this->frameI - info[0]);
         minDi = 0;
-        maxD = info[2] + 1000 * (this->frameI - info[0]) + 1200;
-        minD = info[2] + 1000 * (this->frameI - info[0]) - 1200;
+        maxD = info[2] + 0.500 * (this->frameI - info[0]) + 1;
+        minD = info[2] + 0.500 * (this->frameI - info[0]) - 1;
 
         minSizes = static_cast<float>(info[1] / (2 * (this->frameI - info[0])));
         Vec4f before = this->ballCoordinates.back();
@@ -317,6 +316,8 @@ int Tracker::passCF() {
         float bdepth = this->ballInfo.back()[2];
         // Horizontal FOV (HD 16:9): 64; Vertical FOV (HD 16:9): 41
         double realR = br / (this->width / 2) * bdepth * tan((64 / 2) / 180 * M_PI);
+        //forgive ball radius
+        realR=0;
         if (realR + dis < ringWatcher.r)
             return 1;
         else
@@ -329,12 +330,12 @@ int Tracker::passCF() {
 int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     vector<vector<Point>> contours = this->findForegroundContours(frame, 1);
     //get ring data
-    if (ringWatcher.ring[0] < 0) {
-//       Mat ringR = frame.clone();
-//            imshow("ring", ringR);
-//        cout<<"depth:"<<this->selectROIDepth<float>("ring", ringR)<<endl;
-
-        ringWatcher.ring = Vec4f(357, 159, 35, 4200);
+    if (ringWatcher.ring[0] < 0&&this->frameI>10) {
+//        Mat ringR = frame.clone();
+//        imshow("ring", ringR);
+//        Rect rect = this->selectROIDepth("ring", ringR);
+//        cout << "depth:" << depthFrame.get_distance(rect.tl().x, rect.tl().y) << endl;
+        ringWatcher.ring = Vec4f(310, 135, 45, 6.100);
         ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]));
         ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / 256 * ringWatcher.ring[3] *
                                            tan((57.5 / 2) / 180 * M_PI));
@@ -372,7 +373,7 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     return 0;
 }
 
-int Tracker::test()  {
+int Tracker::test() {
     // Declare depth colorizer for pretty visualization of depth data
     rs2::colorizer color_map;
 
@@ -414,7 +415,7 @@ int Tracker::test()  {
 // move-constructible function object (i.e., an object whose class defines operator(), including closures and function objects).
 int Tracker::operator()(std::future<int> &fut) try {
     // Declare depth colorizer for pretty visualization of depth data
-    //rs2::colorizer color_map;
+    rs2::colorizer color_map;
 
     // Declare RealSense pipeline, encapsulating the actual device and sensors
     rs2::pipeline pipe;
@@ -434,7 +435,7 @@ int Tracker::operator()(std::future<int> &fut) try {
     do {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
         rs2::depth_frame depthFrame = data.get_depth_frame();
-        //rs2::frame depth = color_map(depthFrame);
+        rs2::frame depth = color_map(depthFrame);
         rs2::frame ir = data.get_infrared_frame();
         ++this->frameI;
         cout << "frame:" << this->frameI << endl;
