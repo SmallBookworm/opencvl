@@ -53,14 +53,14 @@ private:
 
     int isPassed(cv::Mat &frame, rs2::depth_frame depthFrame);
 
-    std::vector<std::vector<cv::Point>> findAllContours(cv::Mat &input);
+    std::vector<std::vector<cv::Point>> findAllContours(cv::Mat &input,bool isDepth);
 
     std::vector<std::vector<cv::Point>> findForegroundContours(
             cv::Mat scene, double scale);
 
     cv::Vec4f getEdgeCircle(std::vector<cv::Point> contour);
 
-    cv::Vec3f getCircleCoordinate(cv::Vec4f circle, cv::Vec3f info, int wWidth = 512, int wHeight = 424);
+    cv::Vec3f getCircleCoordinate(cv::Vec4f circle, cv::Vec3f info, int wWidth, int wHeight);
 
     std::vector<cv::RotatedRect> getRotatedRect(std::vector<std::vector<cv::Point>>);
 

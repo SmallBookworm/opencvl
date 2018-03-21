@@ -10,9 +10,9 @@ int main() {
     promise<int> prom;
     future<int> fut = prom.get_future();
     Tracker tracker;
-    thread thread1(tracker, ref(fut));
-    thread1.detach();
-    //tracker.test();
+    //thread thread1(tracker, ref(fut));
+    //thread1.detach();
+    tracker.test();
     getchar();
     prom.set_value(10);
     return 0;

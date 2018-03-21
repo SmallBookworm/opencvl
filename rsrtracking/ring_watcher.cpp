@@ -15,7 +15,9 @@ std::vector<RotatedRect> RingWatcher::getRotatedRect(std::vector<std::vector<Poi
     }
     return objects;
 }
+std::vector<cv::Rect> RingWatcher::getRect(std::vector<std::vector<cv::Point>>) {
 
+}
 cv::RotatedRect RingWatcher::getRingPole(std::vector<cv::Point> contours) {
     vector<cv::Point> pole;
     RotatedRect rect = minAreaRect(contours);
@@ -39,14 +41,15 @@ cv::RotatedRect RingWatcher::getRingPole(std::vector<cv::Point> contours) {
 int RingWatcher::getRing(std::vector<std::vector<cv::Point>> contours, cv::Mat &result) {
     vector<RotatedRect> rects = this->getRotatedRect(contours);
     for (int i = 0; i < rects.size(); ++i) {
-        if (rects[i].size.height < 150)
-            continue;
-        if (rects[i].size.width > rects[i].size.height / 2)
-            continue;
-        if (rects[i].center.x < 200 || rects[i].center.x > 300)
-            continue;
-        if (rects[i].center.y < result.rows / 2)
-            continue;
+
+//        if (rects[i].size.height < 150)
+//            continue;
+//        if (rects[i].size.width > rects[i].size.height / 2)
+//            continue;
+//        if (rects[i].center.x < 200 || rects[i].center.x > 300)
+//            continue;
+//        if (rects[i].center.y < result.rows / 2)
+//            continue;
 
         this->ring[0] = 1;
         RotatedRect ringPole = this->getRingPole(contours[i]);

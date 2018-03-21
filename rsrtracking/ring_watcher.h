@@ -21,6 +21,8 @@ public:
 private:
     std::vector<cv::RotatedRect> getRotatedRect(std::vector<std::vector<cv::Point>>);
 
+    std::vector<cv::Rect> getRect(std::vector<std::vector<cv::Point>>);
+
     cv::RotatedRect getRingPole(std::vector<cv::Point> contours);
 };
 
