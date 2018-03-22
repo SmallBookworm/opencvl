@@ -12,11 +12,12 @@ class RingWatcher {
 public:
     //x,y,r,depth
     cv::Vec4f ring;
-    //x,y,z
+    //real x,y,z
     cv::Vec3f coordinate;
     float r;
 
     int getRing(std::vector<std::vector<cv::Point>> contours, cv::Mat &result);
+    int getThresholdRing(cv::Mat &result);
 
 private:
     std::vector<cv::RotatedRect> getRotatedRect(std::vector<std::vector<cv::Point>>);
@@ -24,6 +25,7 @@ private:
     std::vector<cv::Rect> getRect(std::vector<std::vector<cv::Point>>);
 
     cv::RotatedRect getRingPole(std::vector<cv::Point> contours);
+    cv::Vec3f getPoleRange(cv::Mat &grayFrame);
 };
 
 

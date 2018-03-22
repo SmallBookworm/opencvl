@@ -362,9 +362,7 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     //usleep(100000);
     //judge result when ball passed ring's plane
     Vec3f info0 = this->ballInfo.back();
-    if (info0[2] >= ringWatcher.ring[3]) {
-        //double dis = this->distance<float>(info0[0], ringWatcher.ring[0], info0[1], ringWatcher.ring[1]);
-        //bool flag = (dis + info0[2]) < ringWatcher.ring[2];
+    if (info0[2] >= ringWatcher.coordinate[3]) {
         int res = this->passCF();
         this->ballInfo.clear();
         this->ballCoordinates.clear();
@@ -396,6 +394,8 @@ int Tracker::test() {
     while (contFlag) {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
         rs2::depth_frame depthFrame = data.get_depth_frame();
+        Mat depthMat=depth_frame_to_meters(pipe,depthFrame);
+        inRange(depthMat, 5.5, 6.3, depthMat);
         rs2::frame depth = color_map(depthFrame);
         rs2::frame ir = data.get_infrared_frame();
         ++this->frameI;
@@ -403,10 +403,10 @@ int Tracker::test() {
         // Create OpenCV matrix of size (w,h) from the colorized depth data
         Mat image = frame_to_mat(ir);
         //compute result
-        vector<vector<cv::Point>> contours = this->findAllContours(image, true);
-        ringWatcher.getRing(contours, image);
+        vector<vector<cv::Point>> contours = this->findAllContours(depthMat, true);
+        //ringWatcher.getRing(contours, image);
         // Update the window with new data
-        imshow(window_name, image);
+        imshow(window_name, depthMat);
         contFlag = waitKey(1) < 0;
     }
 
