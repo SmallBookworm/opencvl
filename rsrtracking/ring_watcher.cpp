@@ -15,9 +15,11 @@ std::vector<RotatedRect> RingWatcher::getRotatedRect(std::vector<std::vector<Poi
     }
     return objects;
 }
+
 std::vector<cv::Rect> RingWatcher::getRect(std::vector<std::vector<cv::Point>>) {
 
 }
+
 cv::RotatedRect RingWatcher::getRingPole(std::vector<cv::Point> contours) {
     vector<cv::Point> pole;
     RotatedRect rect = minAreaRect(contours);
@@ -62,4 +64,29 @@ int RingWatcher::getRing(std::vector<std::vector<cv::Point>> contours, cv::Mat &
         break;
     }
     return 1;
+}
+
+cv::Vec3f RingWatcher::getPoleRange(cv::Mat &grayFrame) {
+    float max = 0.75;
+    float min = 0.4;
+    float colsS[grayFrame.cols]{0};
+    vector<int[2]> valueRange[grayFrame.cols];
+
+    for (int i = 0; i < grayFrame.cols; ++i) {
+        for (int j = 0; j < grayFrame.rows; ++j) {
+            if (grayFrame.at<uchar>(j, i) > 0)
+                colsS[i] += 1.0;
+        }
+        colsS[i] /= grayFrame.rows;
+    }
+    int minC = 1;
+    int maxC = grayFrame.cols / 40;
+    int count = 0;
+    for (int k = 0; k < grayFrame.cols; ++k) {
+        if (colsS[k] > min && colsS[k] < max)
+            count++;
+        else {
+
+        }
+    }
 }

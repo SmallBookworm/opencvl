@@ -17,6 +17,7 @@ public:
     float r;
 
     int getRing(std::vector<std::vector<cv::Point>> contours, cv::Mat &result);
+
     int getThresholdRing(cv::Mat &result);
 
 private:
@@ -25,6 +26,7 @@ private:
     std::vector<cv::Rect> getRect(std::vector<std::vector<cv::Point>>);
 
     cv::RotatedRect getRingPole(std::vector<cv::Point> contours);
+
     cv::Vec3f getPoleRange(cv::Mat &grayFrame);
 };
 
