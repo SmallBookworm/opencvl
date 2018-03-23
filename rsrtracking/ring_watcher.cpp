@@ -103,20 +103,30 @@ cv::Vec3f RingWatcher::getPoleRange(Mat grayFrame) {
             count = 0;
     }
     Vec3f res;
-    int noiseDis=grayFrame.rows/10;
+    int endY = 0;
+    int endX = 0;
+    int noiseDis = grayFrame.rows / 10;
     for (int l = 1; l <= count; ++l) {
+        endY += k - l;
         vector<Vec2i> col = valueRange[k - l];
-        int minR=-1;
+        int minR = -1;
         for (auto i = col.rbegin(); i != col.rend(); i++) {
             if (((*i)[1] - (*i)[0]) < noiseDis)
                 continue;
-            if(minR<0||(minR-(*i)[0])<noiseDis)
-            minR=
+            if ((minR - (*i)[0]) > noiseDis)
+                break;
+            minR = (*i)[0];
         }
+        if (minR > 0)
+            endX += minR;
     }
+    res[0] = endX / count;
+    res[1] = endY / count;
+    return res;
 }
 
 int RingWatcher::getThresholdRing(cv::Mat &result) {
     Rect roi(result.cols / 4, result.rows / 4, result.cols / 2, result.rows / 2);
-    this->getPoleRange(Mat(result, roi));
+    Vec3f res=this->getPoleRange(Mat(result, roi));
+    circle(result,Point(res[0],res[1]),10,Scalar(255));
 }
