@@ -17,7 +17,7 @@ public:
     float r;
 
     int getRing(std::vector<std::vector<cv::Point>> contours, cv::Mat &result);
-
+    //-1 fail
     int getThresholdRing(cv::Mat &result);
 
 private:
