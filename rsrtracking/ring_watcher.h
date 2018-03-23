@@ -27,7 +27,7 @@ private:
 
     cv::RotatedRect getRingPole(std::vector<cv::Point> contours);
 
-    cv::Vec3f getPoleRange(cv::Mat &grayFrame);
+    cv::Vec3f getPoleRange(cv::Mat grayFrame);
 };
 
 

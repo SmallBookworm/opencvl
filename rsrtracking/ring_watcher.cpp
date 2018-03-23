@@ -66,27 +66,57 @@ int RingWatcher::getRing(std::vector<std::vector<cv::Point>> contours, cv::Mat &
     return 1;
 }
 
-cv::Vec3f RingWatcher::getPoleRange(cv::Mat &grayFrame) {
+cv::Vec3f RingWatcher::getPoleRange(Mat grayFrame) {
     float max = 0.75;
     float min = 0.4;
     float colsS[grayFrame.cols]{0};
-    vector<int[2]> valueRange[grayFrame.cols];
+    vector<vector<Vec2i>> valueRange;
 
     for (int i = 0; i < grayFrame.cols; ++i) {
+        vector<Vec2i> range;
+        int start = -1;
+        int end = -1;
         for (int j = 0; j < grayFrame.rows; ++j) {
-            if (grayFrame.at<uchar>(j, i) > 0)
+            if (grayFrame.at<uchar>(j, i) > 0) {
                 colsS[i] += 1.0;
+                if (start < 0)
+                    start = j;
+                end = j;
+            } else if (start > 0) {
+                range.emplace_back(start, end);
+                start = end = -1;
+            }
         }
         colsS[i] /= grayFrame.rows;
+        valueRange.push_back(range);
     }
     int minC = 1;
     int maxC = grayFrame.cols / 40;
     int count = 0;
-    for (int k = 0; k < grayFrame.cols; ++k) {
+    int k;
+    for (k = 0; k < grayFrame.cols; ++k) {
         if (colsS[k] > min && colsS[k] < max)
             count++;
-        else {
-
+        else if (count > minC && count < maxC) {
+            break;
+        } else
+            count = 0;
+    }
+    Vec3f res;
+    int noiseDis=grayFrame.rows/10;
+    for (int l = 1; l <= count; ++l) {
+        vector<Vec2i> col = valueRange[k - l];
+        int minR=-1;
+        for (auto i = col.rbegin(); i != col.rend(); i++) {
+            if (((*i)[1] - (*i)[0]) < noiseDis)
+                continue;
+            if(minR<0||(minR-(*i)[0])<noiseDis)
+            minR=
         }
     }
+}
+
+int RingWatcher::getThresholdRing(cv::Mat &result) {
+    Rect roi(result.cols / 4, result.rows / 4, result.cols / 2, result.rows / 2);
+    this->getPoleRange(Mat(result, roi));
 }

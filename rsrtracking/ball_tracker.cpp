@@ -68,14 +68,14 @@ Vec3f Tracker::x2curveFitting(std::vector<float> x, std::vector<float> y) {
     return Vec3f(res.at<float>(0, 0), res.at<float>(0, 1), res.at<float>(0, 2));
 }
 
-vector<vector<Point>> Tracker::findAllContours(Mat &input,bool isDepth) {
+vector<vector<Point>> Tracker::findAllContours(Mat &input, bool isDepth) {
     Mat frame = input.clone();
     //expansive working
     Mat element = getStructuringElement(MORPH_RECT, Size(2, 2));
     dilate(frame, frame, element);
 
-    if(!isDepth)
-    cvtColor(frame, frame, CV_BGR2GRAY);
+    if (!isDepth)
+        cvtColor(frame, frame, CV_BGR2GRAY);
     //高斯平滑
     GaussianBlur(frame, frame, Size(9, 9), 0, 0);
 //    imshow("GaussianBlur", frame);
@@ -141,7 +141,7 @@ Vec4f Tracker::getEdgeCircle(std::vector<Point> contour) {
 cv::Vec3f Tracker::getCircleCoordinate(cv::Vec4f circle, cv::Vec3f info, int wWidth, int wHeight) {
     Vec3f coordinate;
     coordinate[2] = info[2];
-    coordinate[0] = static_cast<float>(info[2] * tan((64.0 / 2)* M_PI / 180 ) * (wWidth / 2 - circle[0]) /
+    coordinate[0] = static_cast<float>(info[2] * tan((64.0 / 2) * M_PI / 180) * (wWidth / 2 - circle[0]) /
                                        (wWidth / 2));
     coordinate[1] = static_cast<float>(info[2] * tan((41.0 / 2) * M_PI / 180) * (wHeight / 2 - circle[1]) /
                                        (wHeight / 2));
@@ -236,7 +236,8 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
             continue;
         if (circle[3] > maxC)
             continue;
-        Vec3f coor = this->getCircleCoordinate(circle, Vec3f(0, 0, depth),depthFrame.get_width(),depthFrame.get_height());
+        Vec3f coor = this->getCircleCoordinate(circle, Vec3f(0, 0, depth), depthFrame.get_width(),
+                                               depthFrame.get_height());
         //test
         cout << "depth:" << depth << endl;
         cout << circle << endl;
@@ -319,7 +320,7 @@ int Tracker::passCF() {
         // Horizontal FOV (HD 16:9): 64; Vertical FOV (HD 16:9): 41
         double realR = br / (this->width / 2) * bdepth * tan((64.0 / 2) / 180 * M_PI);
         //forgive ball radius
-        realR=0;
+        realR = 0;
         if (realR + dis < ringWatcher.r)
             return 1;
         else
@@ -332,13 +333,14 @@ int Tracker::passCF() {
 int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     vector<vector<Point>> contours = this->findForegroundContours(frame, 1);
     //get ring data
-    if (ringWatcher.ring[0] < 0&&this->frameI>10) {
+    if (ringWatcher.ring[0] < 0 && this->frameI > 10) {
 //        Mat ringR = frame.clone();
 //        imshow("ring", ringR);
 //        Rect rect = this->selectROIDepth("ring", ringR);
 //        cout << "depth:" << depthFrame.get_distance(rect.tl().x, rect.tl().y) << endl;
         ringWatcher.ring = Vec4f(310, 135, 45, 6.100);
-        ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),depthFrame.get_width(),depthFrame.get_height());
+        ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
+                                                           depthFrame.get_width(), depthFrame.get_height());
         ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / 256 * ringWatcher.ring[3] *
                                            tan((64.0 / 2) / 180 * M_PI));
     }
@@ -394,17 +396,12 @@ int Tracker::test() {
     while (contFlag) {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
         rs2::depth_frame depthFrame = data.get_depth_frame();
-        Mat depthMat=depth_frame_to_meters(pipe,depthFrame);
+        Mat depthMat = depth_frame_to_meters(pipe, depthFrame);
         inRange(depthMat, 5.5, 6.3, depthMat);
-        rs2::frame depth = color_map(depthFrame);
-        rs2::frame ir = data.get_infrared_frame();
         ++this->frameI;
         cout << "frame:" << this->frameI << endl;
-        // Create OpenCV matrix of size (w,h) from the colorized depth data
-        Mat image = frame_to_mat(ir);
         //compute result
-        vector<vector<cv::Point>> contours = this->findAllContours(depthMat, true);
-        //ringWatcher.getRing(contours, image);
+        ringWatcher.getThresholdRing(depthMat);
         // Update the window with new data
         imshow(window_name, depthMat);
         contFlag = waitKey(1) < 0;
