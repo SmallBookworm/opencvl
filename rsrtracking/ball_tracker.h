@@ -35,6 +35,8 @@ private:
     //frame,points size,depth,
     std::vector<cv::Vec3f> ballInfo;
     RingWatcher ringWatcher;
+    cv::Vec2f dValue;
+    bool reboundTest = false;
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> pBackgroundKnn = cv::createBackgroundSubtractorMOG2();
 
@@ -53,7 +55,11 @@ private:
 
     int passCF();
 
+    //-1 no ball,0 ball run,1 pass,2 not pass
     int isPassed(cv::Mat &frame, rs2::depth_frame depthFrame);
+
+    //-1 no ball,0 ball run,1 pass,2 not pass
+    int surePassed(cv::Mat &frame, rs2::depth_frame depthFrame);
 
     std::vector<std::vector<cv::Point>> findAllContours(cv::Mat &input, bool isDepth);
 
@@ -68,6 +74,7 @@ private:
 
     cv::Vec4f getBall(std::vector<std::vector<cv::Point>> contours, cv::Mat &result, rs2::depth_frame depthFrame);
 
+    cv::Vec4f getReBall(std::vector<std::vector<cv::Point>> contours, cv::Mat &result, rs2::depth_frame depthFrame);
 
     cv::Rect selectROIDepth(std::string windowName, cv::Mat &depthMat);
 

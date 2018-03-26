@@ -141,13 +141,13 @@ Vec4f Tracker::getEdgeCircle(std::vector<Point> contour) {
 cv::Vec3f Tracker::getCircleCoordinate(cv::Vec4f circle, cv::Vec3f info, int wWidth, int wHeight) {
     Vec3f coordinate;
     coordinate[2] = info[2];
-    coordinate[0] = static_cast<float>(info[2] * tan(HANGLE/2) * (wWidth / 2 - circle[0]) /
+    coordinate[0] = static_cast<float>(info[2] * tan(HANGLE / 2) * (wWidth / 2 - circle[0]) /
                                        (wWidth / 2));
     coordinate[1] = static_cast<float>(info[2] * tan(VANGLE / 2) * (wHeight / 2 - circle[1]) /
                                        (wHeight / 2));
     //change coordinate system
-    coordinate[1]= static_cast<float>(cos(SENSEANGLE) * coordinate[1] + sin(SENSEANGLE) * coordinate[2]);
-    coordinate[2]= static_cast<float>(cos(SENSEANGLE) * coordinate[2] - sin(SENSEANGLE) * coordinate[1]);
+    coordinate[1] = static_cast<float>(cos(SENSEANGLE) * coordinate[1] + sin(SENSEANGLE) * coordinate[2]);
+    coordinate[2] = static_cast<float>(cos(SENSEANGLE) * coordinate[2] - sin(SENSEANGLE) * coordinate[1]);
     return coordinate;
 }
 
@@ -346,10 +346,48 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
                                                            depthFrame.get_width(), depthFrame.get_height());
         //
         ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / (depthFrame.get_width() / 2) * ringWatcher.ring[3] *
-                                           tan(HANGLE/2));
+                                           tan(HANGLE / 2));
     }
     Mat result = frame.clone();
     Vec4f circle = getBall(contours, result, depthFrame);
+    // restart when no ball in 5 frames
+    if (circle[0] < 0) {
+        int res = -1;
+        if (!this->ballInfo.empty() && this->frameI - this->ballInfo.back()[0] > 5) {
+            res = this->passCF();
+            this->ballInfo.clear();
+            this->ballCoordinates.clear();
+            this->realCoordinates.clear();
+        }
+        return res;
+    }
+    //test
+    namedWindow("ball", WINDOW_AUTOSIZE);
+    //resizeWindow("ball", 848, 480);
+    imshow("ball", result);
+    //usleep(100000);
+    //judge result when ball passed ring's plane
+    Vec3f info0 = this->ballInfo.back();
+    if (info0[2] >= ringWatcher.coordinate[3]) {
+        int res = this->passCF();
+        this->ballInfo.clear();
+        this->ballCoordinates.clear();
+        this->realCoordinates.clear();
+        return res;
+    }
+
+    return 0;
+}
+
+cv::Vec4f Tracker::getReBall(std::vector<std::vector<cv::Point>> contours, cv::Mat &result,
+                             rs2::depth_frame depthFrame) {
+
+}
+
+int Tracker::surePassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
+    vector<vector<Point>> contours = this->findForegroundContours(frame, 1);
+    Mat result = frame.clone();
+    Vec4f circle = getReBall(contours, result, depthFrame);
     // restart when no ball in 5 frames
     if (circle[0] < 0) {
         int res = -1;
@@ -445,20 +483,41 @@ int Tracker::operator()(std::future<int> &fut) try {
         // Create OpenCV matrix of size (w,h) from the colorized depth data
         Mat image = frame_to_mat(ir);
         //compute result
-        int pas = this->isPassed(image, depthFrame);
-        switch (pas) {
-            case -1:
-                cerr << "no ball!" << endl;
-                break;
-            case 0:
-                cout << "\033[33m" << "run" << "\033[0m" << endl;
-                break;
-            case 1:
-                cout << "\033[32m" << "success!" << "\033[0m" << endl;
-                break;
-            case 2:
-                cout << "\033[32m" << "fail!" << "\033[0m" << endl;
-                break;
+        if (reboundTest) {
+            int sure = this->surePassed(image, depthFrame);
+            //test
+            switch (sure) {
+                case -1:
+                    cerr << "no ball!" << endl;
+                    break;
+                case 0:
+                    cout << "\033[33m" << "run" << "\033[0m" << endl;
+                    break;
+                case 1:
+                    cout << "\033[32m" << "sure!" << "\033[0m" << endl;
+                    break;
+                case 2:
+                    cout << "\033[32m" << "fail!" << "\033[0m" << endl;
+                    break;
+            }
+        } else {
+            int pas = this->isPassed(image, depthFrame);
+            //test
+            switch (pas) {
+                case -1:
+                    cerr << "no ball!" << endl;
+                    break;
+                case 0:
+                    cout << "\033[33m" << "run" << "\033[0m" << endl;
+                    break;
+                case 1:
+                    cout << "\033[32m" << "success!" << "\033[0m" << endl;
+                    reboundTest = true;
+                    break;
+                case 2:
+                    cout << "\033[32m" << "fail!" << "\033[0m" << endl;
+                    break;
+            }
         }
         // Update the window with new data
         imshow(window_name, image);
