@@ -5,6 +5,10 @@
 #ifndef DEPTHTRACK_BALL_TRACKER_H
 #define DEPTHTRACK_BALL_TRACKER_H
 
+#define SENSEANGLE (0.0 / 180 * M_PI)
+#define HANGLE (64.0 / 180 * M_PI)
+#define VANGLE (41.0 / 180 * M_PI)
+
 #include<thread>
 #include <iostream>
 #include <zconf.h>
@@ -31,9 +35,7 @@ private:
     //frame,points size,depth,
     std::vector<cv::Vec3f> ballInfo;
     RingWatcher ringWatcher;
-    //frame
-    int width;
-    int height;
+
     cv::Ptr<cv::BackgroundSubtractorMOG2> pBackgroundKnn = cv::createBackgroundSubtractorMOG2();
 
 
@@ -53,7 +55,7 @@ private:
 
     int isPassed(cv::Mat &frame, rs2::depth_frame depthFrame);
 
-    std::vector<std::vector<cv::Point>> findAllContours(cv::Mat &input,bool isDepth);
+    std::vector<std::vector<cv::Point>> findAllContours(cv::Mat &input, bool isDepth);
 
     std::vector<std::vector<cv::Point>> findForegroundContours(
             cv::Mat scene, double scale);

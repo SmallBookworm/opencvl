@@ -141,10 +141,13 @@ Vec4f Tracker::getEdgeCircle(std::vector<Point> contour) {
 cv::Vec3f Tracker::getCircleCoordinate(cv::Vec4f circle, cv::Vec3f info, int wWidth, int wHeight) {
     Vec3f coordinate;
     coordinate[2] = info[2];
-    coordinate[0] = static_cast<float>(info[2] * tan((64.0 / 2) * M_PI / 180) * (wWidth / 2 - circle[0]) /
+    coordinate[0] = static_cast<float>(info[2] * tan(HANGLE/2) * (wWidth / 2 - circle[0]) /
                                        (wWidth / 2));
-    coordinate[1] = static_cast<float>(info[2] * tan((41.0 / 2) * M_PI / 180) * (wHeight / 2 - circle[1]) /
+    coordinate[1] = static_cast<float>(info[2] * tan(VANGLE / 2) * (wHeight / 2 - circle[1]) /
                                        (wHeight / 2));
+    //change coordinate system
+    coordinate[1]= static_cast<float>(cos(SENSEANGLE) * coordinate[1] + sin(SENSEANGLE) * coordinate[2]);
+    coordinate[2]= static_cast<float>(cos(SENSEANGLE) * coordinate[2] - sin(SENSEANGLE) * coordinate[1]);
     return coordinate;
 }
 
@@ -318,9 +321,9 @@ int Tracker::passCF() {
         float br = this->ballCoordinates.back()[2];
         float bdepth = this->ballInfo.back()[2];
         // Horizontal FOV (HD 16:9): 64; Vertical FOV (HD 16:9): 41
-        double realR = br / (this->width / 2) * bdepth * tan((64.0 / 2) / 180 * M_PI);
+        //double realR = br / (width / 2) * bdepth * tan(HANGLE/2);
         //forgive ball radius
-        realR = 0;
+        double realR = 0;
         if (realR + dis < ringWatcher.r)
             return 1;
         else
@@ -341,8 +344,9 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
         ringWatcher.ring = Vec4f(310, 135, 45, 6.100);
         ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
                                                            depthFrame.get_width(), depthFrame.get_height());
-        ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / 256 * ringWatcher.ring[3] *
-                                           tan((64.0 / 2) / 180 * M_PI));
+        //
+        ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / (depthFrame.get_width() / 2) * ringWatcher.ring[3] *
+                                           tan(HANGLE/2));
     }
     Mat result = frame.clone();
     Vec4f circle = getBall(contours, result, depthFrame);
