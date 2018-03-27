@@ -30,10 +30,12 @@ private:
     int frameI;
     //x,y,r,score
     std::vector<cv::Vec4f> ballCoordinates;
-    //x,y,z
+    //x,y,z(attention:z!=depth,coordinate system is changed)
     std::vector<cv::Vec3f> realCoordinates;
     //frame,points size,depth,
     std::vector<cv::Vec3f> ballInfo;
+    //x,y,z,r
+    std::vector<cv::Vec4f> reBall;
     RingWatcher ringWatcher;
     cv::Vec2f dValue;
     bool reboundTest = false;
