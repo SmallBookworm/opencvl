@@ -328,8 +328,11 @@ int Tracker::passCF() {
             return 1;
         else
             return 2;
-    } else
+    } else {
+        //restart
+        this->clearInfo();
         return -1;
+    }
 }
 
 //-1 no ball,0 ball run,1 pass,2 not pass
@@ -350,14 +353,11 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     }
     Mat result = frame.clone();
     Vec4f circle = getBall(contours, result, depthFrame);
-    // restart when no ball in 5 frames
+    // get result or restart when no ball in 5 frames
     if (circle[0] < 0) {
         int res = -1;
-        if (!this->ballInfo.empty() && this->frameI - this->ballInfo.back()[0] > 5) {
+        if (!this->ballInfo.empty() && this->frameI - this->ballInfo.back()[0] > 4) {
             res = this->passCF();
-            this->ballInfo.clear();
-            this->ballCoordinates.clear();
-            this->realCoordinates.clear();
         }
         return res;
     }
@@ -370,9 +370,6 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     Vec3f info0 = this->ballInfo.back();
     if (info0[2] >= ringWatcher.coordinate[3]) {
         int res = this->passCF();
-        this->ballInfo.clear();
-        this->ballCoordinates.clear();
-        this->realCoordinates.clear();
         return res;
     }
 
@@ -430,13 +427,15 @@ cv::Vec4f Tracker::getReBall(std::vector<std::vector<cv::Point>> contours, cv::M
         cout << "depth:" << depth << endl;
         cout << circle << endl;
         //judge zone when empty.if not,distance.
-        if (this->realCoordinates.empty()) {
-            if (circle[0] > maxX || circle[0] < minX)
-                continue;
-            if (circle[1] > maxY || circle[1] < minY)
+        if (this->reBall.empty()) {
+            double dis = this->realDistance(coor, this->realCoordinates.back());
+            cout << "distance:" << dis << endl;
+            if (dis > maxDi || dis < minDi)
                 continue;
         } else {
-            double dis = this->realDistance(coor, this->realCoordinates.back());
+            Vec4f before = this->reBall.back();
+            Vec3f coordinate(before[0], before[1], before[2]);
+            double dis = this->realDistance(coor, coordinate);
             cout << "distance:" << dis << endl;
             if (dis > maxDi || dis < minDi)
                 continue;
@@ -460,51 +459,59 @@ cv::Vec4f Tracker::getReBall(std::vector<std::vector<cv::Point>> contours, cv::M
         minC[0] = -1;
         return minC;
     }
-    this->ballCoordinates.push_back(minC);
-    this->ballInfo.emplace_back(this->frameI, cSize, cDepth);
-    this->realCoordinates.push_back(realC);
+    this->reBall.push_back(Vec4f(realC[0], realC[1], realC[2], minC[2]));
+    this->reBallInfo.emplace_back(this->frameI, cSize, cDepth);
     //test
     Point center(round(minC[0]), round(minC[1]));
     int radius = round(minC[2]);
     cv::circle(resultImage, center, radius, Scalar(0, 255, 0), 1);
     cerr << minC << endl;
-    cerr << this->ballInfo.back() << endl;
     cerr << realC << endl;
     return minC;
-
 }
 
 int Tracker::surePassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     vector<vector<Point>> contours = this->findForegroundContours(frame, 1);
     Mat result = frame.clone();
     Vec4f circle = getReBall(contours, result, depthFrame);
-    // restart when no ball in 5 frames
-    if (circle[0] < 0) {
-        int res = -1;
-        if (!this->ballInfo.empty() && this->frameI - this->ballInfo.back()[0] > 5) {
-            res = this->passCF();
-            this->ballInfo.clear();
-            this->ballCoordinates.clear();
-            this->realCoordinates.clear();
-        }
-        return res;
-    }
     //test
     namedWindow("ball", WINDOW_AUTOSIZE);
     //resizeWindow("ball", 848, 480);
     imshow("ball", result);
     //usleep(100000);
-    //judge result when ball passed ring's plane
-    Vec3f info0 = this->ballInfo.back();
-    if (info0[2] >= ringWatcher.coordinate[3]) {
-        int res = this->passCF();
-        this->ballInfo.clear();
-        this->ballCoordinates.clear();
-        this->realCoordinates.clear();
-        return res;
+
+    //judge result when ball passed 5 frames
+    if (this->frameI - this->ballInfo.back()[0] > 4) {
+        if (this->reBall.size() < 2) {
+            this->clearInfo();
+            return 1;
+        } else {
+            float dDep = 0;
+            dDep = this->realCoordinates.back()[2] - this->reBall.front()[2];
+            for (int i = 1; i < this->reBall.size(); ++i) {
+                if (dDep < 0) {
+                    this->clearInfo();
+                    return 1;
+                }
+            }
+            //fail when  ball closes in 5 frames
+            this->clearInfo();
+            return 2;
+        }
     }
 
-    return 0;
+    if (circle[0] < 0) {
+        return -1;
+    } else
+        return 0;
+}
+
+void Tracker::clearInfo() {
+    this->ballInfo.clear();
+    this->ballCoordinates.clear();
+    this->realCoordinates.clear();
+    this->reBall.clear();
+    this->reBallInfo.clear();
 }
 
 int Tracker::test() {
@@ -606,6 +613,7 @@ int Tracker::operator()(std::future<int> &fut) try {
                     break;
                 case 2:
                     cout << "\033[32m" << "fail!" << "\033[0m" << endl;
+                    this->clearInfo();
                     break;
             }
         }

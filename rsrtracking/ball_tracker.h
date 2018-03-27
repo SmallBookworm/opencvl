@@ -36,6 +36,8 @@ private:
     std::vector<cv::Vec3f> ballInfo;
     //x,y,z,r
     std::vector<cv::Vec4f> reBall;
+    //frame,points size,depth,
+    std::vector<cv::Vec3f> reBallInfo;
     RingWatcher ringWatcher;
     cv::Vec2f dValue;
     bool reboundTest = false;
@@ -55,12 +57,13 @@ private:
 
     std::vector<float> curveFitting(std::vector<float> x, std::vector<float> y, int dimension);
 
+    //-1 insufficient information(restart),1 pass,2 not pass
     int passCF();
 
-    //-1 no ball,0 ball run,1 pass,2 not pass
+    //-1 no ball,0 ball run,1 pass,2 not pass.don't clear info when it return 0,1,2.
     int isPassed(cv::Mat &frame, rs2::depth_frame depthFrame);
 
-    //-1 no ball,0 ball run,1 pass,2 not pass
+    //-1 no ball,0 ball run,1 pass,2 not pass.auto clear.
     int surePassed(cv::Mat &frame, rs2::depth_frame depthFrame);
 
     std::vector<std::vector<cv::Point>> findAllContours(cv::Mat &input, bool isDepth);
@@ -77,6 +80,8 @@ private:
     cv::Vec4f getBall(std::vector<std::vector<cv::Point>> contours, cv::Mat &result, rs2::depth_frame depthFrame);
 
     cv::Vec4f getReBall(std::vector<std::vector<cv::Point>> contours, cv::Mat &result, rs2::depth_frame depthFrame);
+
+    void clearInfo();
 
     cv::Rect selectROIDepth(std::string windowName, cv::Mat &depthMat);
 
