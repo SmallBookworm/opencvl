@@ -6,8 +6,6 @@
 using namespace std;
 using namespace cv;
 
-Protonect Tracker::protonect;
-
 int main() {
     promise<int> prom;
     future<int> fut = prom.get_future();

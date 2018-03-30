@@ -16,7 +16,8 @@
 class Tracker {
 public:
     Tracker();
-
+//    all threads using the same protonect.if non-static,main thread create a
+//     Tracker object and sub-thread cope it(create another protonect),so race condition occurs.
     static Protonect protonect;
 
 
