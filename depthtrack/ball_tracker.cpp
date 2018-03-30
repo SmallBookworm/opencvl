@@ -455,15 +455,15 @@ void Tracker::test() {
 }
 
 bool Protonect::protonect_shutdown = false;
-Protonect Tracker::protonect;
 
 // move-constructible function object (i.e., an object whose class defines operator(), including closures and function objects).
 void Tracker::operator()(std::future<int> &fut) {
+    Protonect protonect;
     //open kinect
-    if (this->protonect.connect() < 0) {
+    if (protonect.connect() < 0) {
         return;
     }
-    this->protonect.start();
+    protonect.start();
 
     libfreenect2::FrameMap frames;
     Mat depthmat;
