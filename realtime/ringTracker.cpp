@@ -7,14 +7,12 @@
 using namespace cv;
 using namespace std;
 
-cv::Point2f RingTracker::getCoordinate() {
-    lock_guard<mutex> l(coor_mutex);
-    return coordinate;
-}
-
-void RingTracker::operator()() {
-    usleep(100000);
-    lock_guard<mutex> lockGuard(coor_mutex);
-    coordinate.x += 1;
+void RingTracker::operator()(Coordinate &coordinate) {
+    int x = 0;
+    while (true) {
+        usleep(100000);
+        coordinate.set(Point2f(x, 0));
+        x++;
+    }
 
 }
