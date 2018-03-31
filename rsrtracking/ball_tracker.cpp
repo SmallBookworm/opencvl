@@ -347,7 +347,7 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
         ringWatcher.ring = Vec4f(310, 135, 45, 6.100);
         ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
                                                            depthFrame.get_width(), depthFrame.get_height());
-        //
+        //calculate radius .In fact,it is known.
         ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / (depthFrame.get_width() / 2) * ringWatcher.ring[3] *
                                            tan(HANGLE / 2));
     }
