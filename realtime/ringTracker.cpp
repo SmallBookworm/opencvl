@@ -7,7 +7,10 @@
 using namespace cv;
 using namespace std;
 
-cv::Vec3f RingTracker::getPoleRange(Mat grayFrame) {
+cv::Vec3f RingTracker::getPoleRange(Mat depthMat) {
+    //binaryzation
+    Mat grayFrame;
+    inRange(depthMat, 5.5, 6.3, grayFrame);
     float max = 0.75;
     float min = 0.4;
     float colsS[grayFrame.cols]{0};
@@ -50,21 +53,28 @@ cv::Vec3f RingTracker::getPoleRange(Mat grayFrame) {
     }
     int endY = 0;
     int endX = 0;
+    double depth = 0;
     int noiseDis = grayFrame.rows / 10;
     for (int l = 1; l <= count; ++l) {
         endX += k - l;
         vector<Vec2i> col = valueRange[k - l];
-        int minR = -1;
+        int rStart = -1;
+        int rEnd = -1;
         for (auto i = col.rbegin(); i != col.rend(); i++) {
             if (((*i)[1] - (*i)[0]) < noiseDis)
                 continue;
-            if ((minR - (*i)[0]) > noiseDis)
+            if ((rStart - (*i)[0]) > noiseDis)
                 break;
-            minR = (*i)[0];
+            rStart = (*i)[0];
+            rEnd = (*i)[1];
         }
-        if (minR > 0) {
-            cout << minR << endl;
-            endY += minR;
+        if (rStart > 0) {
+            cout << rStart << endl;
+            endY += rStart;
+            //get depth
+            for (int i = rStart; i < rEnd; ++i) {
+
+            }
         }
 
     }
@@ -73,7 +83,7 @@ cv::Vec3f RingTracker::getPoleRange(Mat grayFrame) {
     return res;
 }
 
-int RingTracker::getThresholdRing(cv::Mat &result) {
+int RingTracker::getData(cv::Mat &result) {
     int x0 = result.cols / 4;
     int y0 = 0;
     Rect roi(x0, y0, result.cols / 2, result.rows);
@@ -105,9 +115,9 @@ int RingTracker::operator()(Coordinate &coordinate) {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
         rs2::depth_frame depthFrame = data.get_depth_frame();
         Mat depthMat = depth_frame_to_meters(pipe, depthFrame);
-        inRange(depthMat, 5.5, 6.3, depthMat);
+
         //compute result
-        getThresholdRing(depthMat);
+        getData(depthMat);
 
         coordinate.set(Point2f(0, 0));
         // Update the window with new data

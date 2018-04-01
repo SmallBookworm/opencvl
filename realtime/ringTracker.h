@@ -18,7 +18,7 @@ private:
     cv::Vec3f getPoleRange(cv::Mat grayFrame);
 
     //-1 fail
-    int getThresholdRing(cv::Mat &result);
+    int getData(cv::Mat &result);
 
 public:
     int operator()(Coordinate &coordinate);
