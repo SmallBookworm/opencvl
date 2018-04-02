@@ -7,6 +7,16 @@
 using namespace cv;
 using namespace std;
 
+cv::Point2f RingTracker::getCoordinate(float x, float y, float z, int wWidth, int wHeight) {
+    Point2f coordinate;
+    coordinate.x = z;
+    coordinate.y = static_cast<float>(z * tan(HANGLE / 2) * (wWidth / 2 - x) /
+                                      (wWidth / 2));
+    //horizontal coordinate system
+    coordinate.x = static_cast<float>(cos(SENSEANGLE) * coordinate.x - sin(SENSEANGLE) * coordinate.y);
+    return coordinate;
+}
+
 cv::Vec3f RingTracker::getPoleRange(Mat depthMat) {
     //binaryzation
     Mat grayFrame;
@@ -54,6 +64,7 @@ cv::Vec3f RingTracker::getPoleRange(Mat depthMat) {
     int endY = 0;
     int endX = 0;
     double depth = 0;
+    int sums = 0;
     int noiseDis = grayFrame.rows / 10;
     for (int l = 1; l <= count; ++l) {
         endX += k - l;
@@ -73,13 +84,15 @@ cv::Vec3f RingTracker::getPoleRange(Mat depthMat) {
             endY += rStart;
             //get depth
             for (int i = rStart; i < rEnd; ++i) {
-
+                depth += depthMat.at<double>(i, k - l);
+                sums++;
             }
         }
 
     }
     res[0] = endX / count;
     res[1] = endY / count;
+    res[2] = static_cast<float>(depth / sums);
     return res;
 }
 

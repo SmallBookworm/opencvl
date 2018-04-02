@@ -5,6 +5,10 @@
 #ifndef REALTIME_RINGTRACKER_H
 #define REALTIME_RINGTRACKER_H
 
+#define SENSEANGLE (0.0 / 180 * M_PI)
+#define HANGLE (64.0 / 180 * M_PI)
+#define VANGLE (41.0 / 180 * M_PI)
+
 #include <opencv2/opencv.hpp>
 #include <librealsense2/rs.hpp>
 #include <zconf.h>
@@ -14,6 +18,10 @@
 class RingTracker {
 private:
     double distance;
+
+    float angle = 0;
+
+    cv::Point2f getCoordinate(float x, float y, float z, int wWidth, int wHeight);
 
     cv::Vec3f getPoleRange(cv::Mat grayFrame);
 
