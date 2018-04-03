@@ -3,17 +3,32 @@
 //
 
 #include "ringTracker.h"
+#include "cv-helpers.hpp"
 
 using namespace cv;
 using namespace std;
 
-cv::Point2f RingTracker::getCoordinate(float x, float y, float z, int wWidth, int wHeight) {
+cv::Point2f RingTracker::absoluteCoordinate(float x, float y) {
     Point2f coordinate;
-    coordinate.x = z;
-    coordinate.y = static_cast<float>(z * tan(HANGLE / 2) * (wWidth / 2 - x) /
-                                      (wWidth / 2));
-    //horizontal coordinate system
-    coordinate.x = static_cast<float>(cos(SENSEANGLE) * coordinate.x - sin(SENSEANGLE) * coordinate.y);
+    //1
+    coordinate.x = -x;
+    coordinate.y = -y;
+    //2
+    coordinate.x = cos(this->angle) * coordinate.x - sin(this->angle) * coordinate.y;
+    coordinate.y = cos(this->angle) * coordinate.x + sin(this->angle) * coordinate.y;
+    return coordinate;
+}
+
+cv::Vec3f RingTracker::getCoordinate(float x, float y, float z, int wWidth, int wHeight) {
+    Vec3f coordinate;
+    coordinate[2] = z;
+    coordinate[0] = static_cast<float>(z * tan(HANGLE / 2) * (wWidth / 2 - x) /
+                                       (wWidth / 2));
+    coordinate[1] = static_cast<float>(z * tan(VANGLE / 2) * (wHeight / 2 - y) /
+                                       (wHeight / 2));
+    //change coordinate system
+    coordinate[1] = static_cast<float>(cos(SENSEANGLE) * coordinate[1] + sin(SENSEANGLE) * coordinate[2]);
+    coordinate[2] = static_cast<float>(cos(SENSEANGLE) * coordinate[2] - sin(SENSEANGLE) * coordinate[1]);
     return coordinate;
 }
 
@@ -96,13 +111,17 @@ cv::Vec3f RingTracker::getPoleRange(Mat depthMat) {
     return res;
 }
 
-int RingTracker::getData(cv::Mat &result) {
+int RingTracker::getData(cv::Mat &result, Coordinate &coordinate) {
     int x0 = result.cols / 4;
     int y0 = 0;
     Rect roi(x0, y0, result.cols / 2, result.rows);
     Vec3f res = this->getPoleRange(Mat(result, roi));
     if (res[0] < 0)
         return -1;
+    res = this->getCoordinate(res[0] + x0, res[1] + y0, res[2], result.cols, result.rows);
+    //z->x,x->y
+    coordinate.set(absoluteCoordinate(res[2], res[0]));
+
     circle(result, Point(x0 + res[0], y0 + res[1]), 10, Scalar(255));
 }
 
@@ -130,9 +149,9 @@ int RingTracker::operator()(Coordinate &coordinate) {
         Mat depthMat = depth_frame_to_meters(pipe, depthFrame);
 
         //compute result
-        getData(depthMat);
+        if (getData(depthMat, coordinate) < 0)
+            cout << "fail" << endl;
 
-        coordinate.set(Point2f(0, 0));
         // Update the window with new data
         imshow(window_name, depthMat);
         contFlag = waitKey(1) < 0;

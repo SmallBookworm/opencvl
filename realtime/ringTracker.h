@@ -13,7 +13,6 @@
 #include <librealsense2/rs.hpp>
 #include <zconf.h>
 #include "coordinate.h"
-#include "cv-helpers.hpp"
 
 class RingTracker {
 private:
@@ -21,12 +20,14 @@ private:
 
     float angle = 0;
 
-    cv::Point2f getCoordinate(float x, float y, float z, int wWidth, int wHeight);
+    cv::Point2f absoluteCoordinate(float x, float y);
+
+    cv::Vec3f getCoordinate(float x, float y, float z, int wWidth, int wHeight);
 
     cv::Vec3f getPoleRange(cv::Mat grayFrame);
 
     //-1 fail
-    int getData(cv::Mat &result);
+    int getData(cv::Mat &result, Coordinate &coordinate);
 
 public:
     int operator()(Coordinate &coordinate);
