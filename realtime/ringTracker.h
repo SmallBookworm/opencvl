@@ -18,9 +18,7 @@ class RingTracker {
 private:
     double distance;
 
-    float angle = 0;
-
-    cv::Point2f absoluteCoordinate(float x, float y);
+    cv::Point2f absoluteCoordinate(float x, float y, float angle);
 
     cv::Vec3f getCoordinate(float x, float y, float z, int wWidth, int wHeight);
 

@@ -8,14 +8,14 @@
 using namespace cv;
 using namespace std;
 
-cv::Point2f RingTracker::absoluteCoordinate(float x, float y) {
+cv::Point2f RingTracker::absoluteCoordinate(float x, float y, float angle) {
     Point2f coordinate;
     //1
     coordinate.x = -x;
     coordinate.y = -y;
     //2
-    coordinate.x = cos(this->angle) * coordinate.x - sin(this->angle) * coordinate.y;
-    coordinate.y = cos(this->angle) * coordinate.x + sin(this->angle) * coordinate.y;
+    coordinate.x = cos(angle) * coordinate.x - sin(angle) * coordinate.y;
+    coordinate.y = cos(angle) * coordinate.x + sin(angle) * coordinate.y;
     return coordinate;
 }
 
@@ -120,7 +120,7 @@ int RingTracker::getData(cv::Mat &result, Coordinate &coordinate) {
         return -1;
     res = this->getCoordinate(res[0] + x0, res[1] + y0, res[2], result.cols, result.rows);
     //z->x,x->y
-    coordinate.set(absoluteCoordinate(res[2], res[0]));
+    coordinate.set(absoluteCoordinate(res[2], res[0], coordinate.getDAngle()));
 
     circle(result, Point(x0 + res[0], y0 + res[1]), 10, Scalar(255));
 }
