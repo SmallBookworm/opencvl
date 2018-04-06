@@ -551,7 +551,7 @@ int Tracker::test() {
 
 
 // move-constructible function object (i.e., an object whose class defines operator(), including closures and function objects).
-int Tracker::operator()(std::future<int> &fut) try {
+int Tracker::operator()(std::future<int> &fut, DeviationPosition &position) try {
     // Declare depth colorizer for pretty visualization of depth data
     rs2::colorizer color_map;
 

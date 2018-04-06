@@ -16,13 +16,14 @@
 #include <opencv2/opencv.hpp>
 #include <librealsense2/rs.hpp>
 #include "ring_watcher.h"
+#include "deviationPosition.h"
 
 class Tracker {
 public:
     Tracker();
 
     //define operator()
-    int operator()(std::future<int> &fut);
+    int operator()(std::future<int> &fut, DeviationPosition &position);
 
     int test();
 
@@ -39,7 +40,7 @@ private:
     //frame,points size,depth,
     std::vector<cv::Vec3f> reBallInfo;
     RingWatcher ringWatcher;
-    cv::Vec2f dValue;
+    cv::Point2f dValue;
     bool reboundTest = false;
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> pBackgroundKnn = cv::createBackgroundSubtractorMOG2();
