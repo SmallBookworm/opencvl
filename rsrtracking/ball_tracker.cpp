@@ -307,6 +307,7 @@ int Tracker::passCF() {
         point[0] = (point[2] - func1[0]) / func1[1];
 
         float b = func1[1];
+        //1/sin(a)
         double bc = sqrt(pow(1 / b, 2) + 1);
         xs.clear();
         ys.clear();
@@ -317,9 +318,14 @@ int Tracker::passCF() {
         Vec3f func2 = this->x2curveFitting(xs, ys);
         point[1] = static_cast<float>(func2[0] + func2[1] * point[2] * bc + func2[2] * pow(point[2] * bc, 2));
         double dis = this->realDistance(ringWatcher.coordinate, point);
+        //d-value
+        Vec3f dv = point - ringWatcher.coordinate;
+        this->dValue.x = dv[0];
+        this->dValue.y = dv[1];
 
         float br = this->ballCoordinates.back()[2];
         float bdepth = this->ballInfo.back()[2];
+        //Of course,ball's radius don't change when coordinate system is changed.
         // Horizontal FOV (HD 16:9): 64; Vertical FOV (HD 16:9): 41
         double realR = br / (848 / 2) * bdepth * tan(HANGLE / 2);
         if (realR + dis < ringWatcher.r)
@@ -335,7 +341,6 @@ int Tracker::passCF() {
     }
 }
 
-//-1 no ball,0 ball run,1 pass,2 not pass
 int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     vector<vector<Point>> contours = this->findForegroundContours(frame, 1);
     //get ring data
@@ -592,9 +597,11 @@ int Tracker::operator()(std::future<int> &fut, DeviationPosition &position) try 
                     break;
                 case 1:
                     cout << "\033[32m" << "sure!" << "\033[0m" << endl;
+                    position.setPoint(this->dValue,1);
                     break;
                 case 2:
                     cout << "\033[32m" << "fail!" << "\033[0m" << endl;
+                    position.setPoint(this->dValue,2);
                     break;
             }
         } else {
@@ -609,11 +616,16 @@ int Tracker::operator()(std::future<int> &fut, DeviationPosition &position) try 
                     break;
                 case 1:
                     cout << "\033[32m" << "success!" << "\033[0m" << endl;
-                    reboundTest = true;
+                    position.setPoint(this->dValue,pas);
                     break;
                 case 2:
                     cout << "\033[32m" << "fail!" << "\033[0m" << endl;
+                    position.setPoint(this->dValue,pas);
                     this->clearInfo();
+                    break;
+                case 3:
+                    cout << "\033[32m" << "no sure!" << "\033[0m" << endl;
+                    reboundTest = true;
                     break;
             }
         }
