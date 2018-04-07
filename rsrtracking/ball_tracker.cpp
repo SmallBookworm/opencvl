@@ -601,7 +601,7 @@ int Tracker::operator()(std::future<int> &fut, DeviationPosition &position) try 
                     break;
                 case 2:
                     cout << "\033[32m" << "fail!" << "\033[0m" << endl;
-                    position.setPoint(this->dValue,2);
+                    position.setPoint(this->dValue,0);
                     break;
             }
         } else {
@@ -616,11 +616,11 @@ int Tracker::operator()(std::future<int> &fut, DeviationPosition &position) try 
                     break;
                 case 1:
                     cout << "\033[32m" << "success!" << "\033[0m" << endl;
-                    position.setPoint(this->dValue,pas);
+                    position.setPoint(this->dValue,1);
                     break;
                 case 2:
                     cout << "\033[32m" << "fail!" << "\033[0m" << endl;
-                    position.setPoint(this->dValue,pas);
+                    position.setPoint(this->dValue,0);
                     this->clearInfo();
                     break;
                 case 3:
