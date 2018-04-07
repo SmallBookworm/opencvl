@@ -321,11 +321,11 @@ int Tracker::passCF() {
         float br = this->ballCoordinates.back()[2];
         float bdepth = this->ballInfo.back()[2];
         // Horizontal FOV (HD 16:9): 64; Vertical FOV (HD 16:9): 41
-        //double realR = br / (width / 2) * bdepth * tan(HANGLE/2);
-        //forgive ball radius
-        double realR = 0;
+        double realR = br / (848 / 2) * bdepth * tan(HANGLE / 2);
         if (realR + dis < ringWatcher.r)
             return 1;
+        else if (dis < ringWatcher.r)
+            return 3;
         else
             return 2;
     } else {
