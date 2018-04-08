@@ -264,15 +264,16 @@ void LineTest::drawDetectLines(Mat &image, const vector<Vec4i> &lines, Scalar &c
         ++it;
     }
 }
+
 int LineTest::watch(cv::Mat src) {
-    Mat  pBinary, record, dst;
+    Mat pBinary, record, dst;
     dst = Mat::zeros(Size(WIDTH, HEIGHT), CV_8UC1);
     vector<Mat> mv;
     vector<Vec4i> lines;
     Mat element = getStructuringElement(MORPH_RECT, Size(10, 10));
     Mat elementE = getStructuringElement(MORPH_RECT, Size(9, 9));
     //亮度调整
-    src.convertTo(record, - 1,0.1, 0);
+    src.convertTo(record, -1, 0.1, 0);
     //通道分离
     split(record, mv);
     //mv[2] 红 mv[1] 绿 mv[0] 蓝
@@ -288,13 +289,36 @@ int LineTest::watch(cv::Mat src) {
     if (lines.size() == 4) {
         //drawDetectLines(src, lines, Scalar(0, 255, 0));
         analyse(all_line, left_line, right_line, left2_line, right2_line, lines);
-    }
-    else if (lines.size() < 4) {
-        cout << "invalid " << lines.size() <<endl;
-    }
-    else if (lines.size() > 4) {
-        cout << "invalid " << lines.size() <<endl;
+    } else if (lines.size() < 4) {
+        cout << "invalid " << lines.size() << endl;
+    } else if (lines.size() > 4) {
+        cout << "invalid " << lines.size() << endl;
     }
     return static_cast<int>(lines.size());
 }
 
+int LineTest::operator()(std::future<int> &fut, LineInfo &info) {
+    VideoCapture capture;
+    capture.open("/home/peng/下载/realse/1.avi");
+
+    Mat srcImage;
+    if (!capture.isOpened()) {
+        std::cout << "fail to open video!" << std::endl;
+        return -1;
+    }
+
+    LineTest lineTest;
+    while (capture.isOpened()) {
+        capture >> srcImage;
+        if (srcImage.empty())
+            break;
+        int size = lineTest.watch(srcImage);
+        //test
+        cout << size << endl;
+        imshow("show", srcImage);
+        if (waitKey(1) == 27) {
+            break;
+        }
+    }
+    return 0;
+}
