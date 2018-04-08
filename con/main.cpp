@@ -13,7 +13,7 @@ get_foreground_object(Ptr<BackgroundSubtractorMOG2> pBackgroundKnn, Mat scene, d
 int main() {
 
     VideoCapture capture;
-    capture.open("/home/peng/下载/机器学习视频/IMG_2382.MOV");
+    capture.open("/home/peng/下载/realse/1.avi");
 
     Mat srcImage;
     if (!capture.isOpened()) {
