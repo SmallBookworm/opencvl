@@ -5,7 +5,6 @@
 #ifndef LIGHTBAR_LINEINFO_H
 #define LIGHTBAR_LINEINFO_H
 
-#include <future>
 #include <mutex>
 
 class LineInfo {
