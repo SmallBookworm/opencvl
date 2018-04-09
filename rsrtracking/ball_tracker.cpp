@@ -630,6 +630,7 @@ int Tracker::operator()(std::future<int> &fut, DeviationPosition &position) try 
             }
         }
         // Update the window with new data
+        //test
         imshow(window_name, image);
         contFlag = waitKey(1) < 0;
         status = fut.wait_for(chrono::milliseconds(1));

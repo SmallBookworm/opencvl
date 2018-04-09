@@ -35,6 +35,7 @@ public:
     LinesOption right_line;
     LinesOption left2_line;
     LinesOption right2_line;
+    float info_value[3]{0};
 public:
     int watch(cv::Mat res);
 

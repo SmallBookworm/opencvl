@@ -174,14 +174,17 @@ void LineTest::analyse(LinesOption all_line, LinesOption left_line, LinesOption 
     float real_right_D = right_line.realdist(3, lines);
     float pic_angle = AngleCalculate(real_left_D, real_right_D);
     float angle = pic_angle - sinit_angle;
+    //cout << "the angle is : " << angle << endl;
     float radian = rad(angle);
-    cout << "the angle is : " << angle << endl;
     float leftToCenter = left_line.centerPoint(0, lines).x - WIDTH / 2;
     float rightToCenter = right_line.centerPoint(3, lines).x - WIDTH / 2;
     const float sleftToCenter = -126;//$$$$$$$$$$$$$$$$$$
     const float srightToCenter = 146;//$$$$$$$$$$$$$$$$$$
     const float unit = (float) sreal_height / (float) spix_light_height;
     int r = 2;
+
+    float vectRadian;
+    float vectLength;
     if (pix_left_height > pix_right_height) {
         float pix_delta_x = (float) sreal_width * ((float) leftToCenter / (float) left_line.surposepixWidth(0, lines) -
                                                    (float) sleftToCenter / (float) spix_light_width);
@@ -199,10 +202,10 @@ void LineTest::analyse(LinesOption all_line, LinesOption left_line, LinesOption 
         float x = data1[0];
         float *data2 = dv.ptr<float>(0);
         float y = data1[1];
-        float vectRadian = atan2f(y, x);
-        float vectLength = sqrtf(powf(x, 2) + powf(y, 2));
-        cout << "vectRadian: " << vectRadian << endl;//
-        cout << "vectLength: " << vectLength << endl;
+        vectRadian = atan2f(y, x);
+        vectLength = sqrtf(powf(x, 2) + powf(y, 2));
+        //cout << "vectRadian: " << vectRadian << endl;//
+        //cout << "vectLength: " << vectLength << endl;
     }
     if (pix_right_height > pix_left_height) {
         float pix_delta_x = (float) sreal_width *
@@ -222,10 +225,10 @@ void LineTest::analyse(LinesOption all_line, LinesOption left_line, LinesOption 
         float x = data1[0];
         float *data2 = dv.ptr<float>(0);
         float y = data1[1];
-        float vectRadian = atan2f(y, x);
-        float vectLength = sqrtf(powf(x, 2) + powf(y, 2));
-        cout << "vectRadian: " << vectRadian << endl;
-        cout << "vectLength: " << vectLength << endl;
+        vectRadian = atan2f(y, x);
+        vectLength = sqrtf(powf(x, 2) + powf(y, 2));
+        //cout << "vectRadian: " << vectRadian << endl;
+        //cout << "vectLength: " << vectLength << endl;
     }
     if (pix_left_height == pix_right_height) {
         float pix_delta_x = (float) sreal_width * ((float) srightToCenter / (float) spix_light_width -
@@ -246,12 +249,18 @@ void LineTest::analyse(LinesOption all_line, LinesOption left_line, LinesOption 
         float x = data1[0];
         float *data2 = dv.ptr<float>(0);
         float y = data1[1];
-        float vectRadian = atan2f(y, x);
-        float vectLength = sqrtf(powf(x, 2) + powf(y, 2));
-        cout << "vectRadian: " << vectRadian << endl;
-        cout << "vectLength: " << vectLength << endl;
+        vectRadian = atan2f(y, x);
+        vectLength = sqrtf(powf(x, 2) + powf(y, 2));
+        //cout << "vectRadian: " << vectRadian << endl;
+        //cout << "vectLength: " << vectLength << endl;
     }
+    this->info_value[0] = vectLength;
+    this->info_value[1] = vectRadian;
+    this->info_value[2] = angle;
 
+//    cout << "the angle is : " << angle << endl;
+//    cout << "vectRadian: " << vectRadian << endl;
+//    cout << "vectLength: " << vectLength << endl;
 }
 
 void LineTest::drawDetectLines(Mat &image, const vector<Vec4i> &lines, Scalar &color) {
@@ -290,9 +299,9 @@ int LineTest::watch(cv::Mat src) {
         //drawDetectLines(src, lines, Scalar(0, 255, 0));
         analyse(all_line, left_line, right_line, left2_line, right2_line, lines);
     } else if (lines.size() < 4) {
-        cout << "invalid " << lines.size() << endl;
+        //cout << "invalid " << lines.size() << endl;
     } else if (lines.size() > 4) {
-        cout << "invalid " << lines.size() << endl;
+        //cout << "invalid " << lines.size() << endl;
     }
     return static_cast<int>(lines.size());
 }
@@ -307,18 +316,23 @@ int LineTest::operator()(LineInfo &info) {
         return -1;
     }
 
-    LineTest lineTest;
-    while (capture.isOpened()) {
+    bool status=info.getStop();
+    while (!status) {
         capture >> srcImage;
-        if (srcImage.empty())
+        if (!capture.isOpened() || srcImage.empty())
             break;
-        int size = lineTest.watch(srcImage);
+        int size = watch(srcImage);
         //test
-        cout << size << endl;
+        //cout << size << endl;
+        if (size == 4) {
+            info.set(info_value);
+        }
+        //test
         imshow("show", srcImage);
         if (waitKey(1) == 27) {
             break;
         }
-    }
+        status = info.getStop();
+    };
     return 0;
 }

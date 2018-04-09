@@ -6,24 +6,25 @@ using namespace cv;
 
 int main() {
     bool init = false;
-    promise<int> prom;
     LineInfo info;
     while (true) {
         if (!init) {
-            future<int> fut = prom.get_future();
-            info.fut = &fut;
+            info.init();
             LineTest tracker;
-            thread thread1(tracker, ref(fut), ref(info));
+            thread thread1(tracker, ref(info));
             thread1.detach();
             init = true;
         } else {
             float res[3];
             if (info.get(res) > 0)
-                cout << res << endl;
-            if (waitKey(1) == 27)
-                prom.set_value(10);
-            else
-                break;
+                cout << res[0] <<"  "<< res[1] << endl;
+            //can't get 'A' once more
+//            if (getchar() == 65){
+//                info.setStop(true);
+//                cout << info.getStop() << endl;
+//            }
+//            else if (getchar() == 97)
+//                init = false;
         }
     }
 

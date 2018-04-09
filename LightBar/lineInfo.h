@@ -15,19 +15,26 @@ private:
     float relativeAngle;
     bool used;
     std::mutex line_mutex;
+private:
+    bool stop;
+    std::mutex stop_mutex;
 public:
-    //write only before read
-    std::future<int> *fut;
-
     LineInfo() {
-        used = true;
+        used= true;
+        stop = false;
     }
 
 public:
+    void init();
+
     void set(float value[3]);
 
 //-1 used,1 success
     int get(float *res);
+
+    void setStop(bool f);
+
+    bool getStop();
 };
 
 
