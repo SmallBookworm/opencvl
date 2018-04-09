@@ -8,7 +8,6 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 
-#define PI 3.14159265358979323846
 
 class LineFinder {
 private:
@@ -24,7 +23,7 @@ public:
     // Default accumulator resolution is 1 pixel by 1 degree
     // no gap, no mimimum length
     LineFinder() : deltaRho(1),
-                   deltaTheta(PI / 180),
+                   deltaTheta(M_PI / 180),
                    minVote(10),
                    minLength(30),
                    maxGap(20) {}

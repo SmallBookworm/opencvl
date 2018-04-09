@@ -44,12 +44,12 @@ float LineTest::RadianCalculate(float rleft, float rright) {
 }
 
 float LineTest::rad(float ang) {
-    return (float) ang * PI / (float) 180;
+    return (float) ang * M_PI / (float) 180;
 }
 
 float LineTest::AngleCalculate(float rleft, float rright) {
     float radian = asinf((float) (rleft - rright) / (float) sreal_width);
-    float angle = (float) radian * 180 / (float) PI;
+    float angle = (float) radian * 180 / (float) M_PI;
     return angle;
 }
 

@@ -12,7 +12,6 @@
 
 #define WIDTH 1920
 #define HEIGHT 1080
-#define PI 3.141592653589793
 #define sD 697
 #define spix_light_height 238//灯条外接矩形的高度（像素）
 #define spix_light_width 272//灯条外接矩形的宽度（像素）
