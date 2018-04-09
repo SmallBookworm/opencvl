@@ -23,3 +23,21 @@ void DeviationPosition::setPoint(cv::Point2f point, int res) {
     DeviationPosition::point = point;
     used = false;
 }
+
+bool DeviationPosition::getStop() {
+    lock_guard<mutex> l(stop_mutex);
+    return stop;
+}
+
+void DeviationPosition::setStop(bool f) {
+    lock_guard<mutex> l(stop_mutex);
+    stop = f;
+}
+
+void DeviationPosition::init() {
+    lock_guard<mutex> l(coor_mutex);
+    lock_guard<mutex> s(stop_mutex);
+    state = -1;
+    used = true;
+    stop = false;
+}
