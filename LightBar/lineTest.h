@@ -5,7 +5,6 @@
 #ifndef LIGHTBAR_LINETEST_H
 #define LIGHTBAR_LINETEST_H
 
-#include <future>
 #include "linesOption.h"
 #include "lineInfo.h"
 
@@ -40,7 +39,7 @@ public:
     int watch(cv::Mat res);
 
     //define operator()
-    int operator()(std::future<int> &fut, LineInfo &res);
+    int operator()(LineInfo &info);
 };
 
 

@@ -297,7 +297,7 @@ int LineTest::watch(cv::Mat src) {
     return static_cast<int>(lines.size());
 }
 
-int LineTest::operator()(std::future<int> &fut, LineInfo &info) {
+int LineTest::operator()(LineInfo &info) {
     VideoCapture capture;
     capture.open("/home/peng/下载/realse/1.avi");
 
