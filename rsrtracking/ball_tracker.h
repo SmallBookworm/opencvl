@@ -23,7 +23,7 @@ public:
     Tracker();
 
     //define operator()
-    int operator()(std::future<int> &fut, DeviationPosition &position);
+    int operator()(DeviationPosition &position);
 
     int test();
 

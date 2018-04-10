@@ -556,7 +556,7 @@ int Tracker::test() {
 
 
 // move-constructible function object (i.e., an object whose class defines operator(), including closures and function objects).
-int Tracker::operator()(std::future<int> &fut, DeviationPosition &position) try {
+int Tracker::operator()(DeviationPosition &position) try {
     // Declare depth colorizer for pretty visualization of depth data
     rs2::colorizer color_map;
 
@@ -573,9 +573,8 @@ int Tracker::operator()(std::future<int> &fut, DeviationPosition &position) try 
 
     const auto window_name = "Display Image";
     namedWindow(window_name, WINDOW_AUTOSIZE);
-    bool contFlag = true;
-    future_status status;
-    do {
+    bool status=position.getStop();
+    while (!status) {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
         rs2::depth_frame depthFrame = data.get_depth_frame();
         rs2::frame depth = color_map(depthFrame);
@@ -597,11 +596,11 @@ int Tracker::operator()(std::future<int> &fut, DeviationPosition &position) try 
                     break;
                 case 1:
                     cout << "\033[32m" << "sure!" << "\033[0m" << endl;
-                    position.setPoint(this->dValue,1);
+                    position.setPoint(this->dValue, 1);
                     break;
                 case 2:
                     cout << "\033[32m" << "fail!" << "\033[0m" << endl;
-                    position.setPoint(this->dValue,0);
+                    position.setPoint(this->dValue, 0);
                     break;
             }
         } else {
@@ -616,11 +615,11 @@ int Tracker::operator()(std::future<int> &fut, DeviationPosition &position) try 
                     break;
                 case 1:
                     cout << "\033[32m" << "success!" << "\033[0m" << endl;
-                    position.setPoint(this->dValue,1);
+                    position.setPoint(this->dValue, 1);
                     break;
                 case 2:
                     cout << "\033[32m" << "fail!" << "\033[0m" << endl;
-                    position.setPoint(this->dValue,0);
+                    position.setPoint(this->dValue, 0);
                     this->clearInfo();
                     break;
                 case 3:
@@ -632,9 +631,11 @@ int Tracker::operator()(std::future<int> &fut, DeviationPosition &position) try 
         // Update the window with new data
         //test
         imshow(window_name, image);
-        contFlag = waitKey(1) < 0;
-        status = fut.wait_for(chrono::milliseconds(1));
-    } while (contFlag && (status != future_status::ready));
+        if (waitKey(1) == 27)
+            break;
+
+        status = position.getStop();
+    };
 
     return EXIT_SUCCESS;
 }

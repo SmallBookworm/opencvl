@@ -7,11 +7,9 @@ using namespace std;
 using namespace cv;
 
 int main() {
-    promise<int> prom;
-    future<int> fut = prom.get_future();
     DeviationPosition position;
     Tracker tracker;
-    thread thread1(tracker, ref(fut),ref(position));
+    thread thread1(tracker,ref(position));
     thread1.detach();
     //tracker.test();
     getchar();
@@ -19,6 +17,6 @@ int main() {
     if (position.getPoint(point2f) > 0)
         cout << point2f << endl;
     getchar();
-    prom.set_value(10);
+    position.setStop(true);
     return 0;
 }
