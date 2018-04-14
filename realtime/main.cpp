@@ -14,7 +14,7 @@ int main() {
     while (true) {
         Point2f point2f = coordinate.get();
         cout << point2f << endl;
-        usleep(1000000);
+        //usleep(1000000);
     }
 
     return 0;

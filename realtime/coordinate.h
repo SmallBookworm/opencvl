@@ -28,7 +28,7 @@ public:
     //only one thread use this function
     void set(cv::Point2f point);
 
-    float getDAngle() const;
+    float getDAngle();
 
     void setDAngle(float dAngle);
 };

@@ -12,6 +12,7 @@ using namespace cv;
 Tracker::Tracker() {
     this->frameI = 0;
     ringWatcher.ring[0] = -1;
+    reboundTest = false;
 }
 
 template<typename T>
@@ -348,8 +349,8 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
 //        Mat ringR = frame.clone();
 //        imshow("ring", ringR);
 //        Rect rect = this->selectROIDepth("ring", ringR);
-//        cout << "depth:" << depthFrame.get_distance(rect.tl().x, rect.tl().y) << endl;
-        ringWatcher.ring = Vec4f(310, 135, 45, 6.100);
+//        cout << "rdepth:" << depthFrame.get_distance(rect.tl().x, rect.tl().y) << endl;
+        ringWatcher.ring = Vec4f(413, 170, 73, 4.32);
         ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
                                                            depthFrame.get_width(), depthFrame.get_height());
         //calculate radius .In fact,it is known.
@@ -372,8 +373,8 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     imshow("ball", result);
     //usleep(100000);
     //judge result when ball passed ring's plane
-    Vec3f info0 = this->ballInfo.back();
-    if (info0[2] >= ringWatcher.coordinate[3]) {
+    Vec3f info0 = this->realCoordinates.back();
+    if (info0[2] >= ringWatcher.coordinate[2]) {
         int res = this->passCF();
         return res;
     }
@@ -512,6 +513,7 @@ int Tracker::surePassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
 }
 
 void Tracker::clearInfo() {
+    reboundTest= false;
     this->ballInfo.clear();
     this->ballCoordinates.clear();
     this->realCoordinates.clear();

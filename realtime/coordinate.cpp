@@ -14,7 +14,7 @@ void Coordinate::set(cv::Point2f point) {
     this->coordinate=point;
 }
 
-float Coordinate::getDAngle() const {
+float Coordinate::getDAngle() {
     lock_guard <mutex> l(angle_mutex);
     return dAngle;
 }

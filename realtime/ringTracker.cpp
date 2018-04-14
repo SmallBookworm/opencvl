@@ -15,7 +15,7 @@ cv::Point2f RingTracker::absoluteCoordinate(float x, float y, float angle) {
     coordinate.y = -y;
     //2
     coordinate.x = cos(angle) * coordinate.x - sin(angle) * coordinate.y;
-    coordinate.y = cos(angle) * coordinate.x + sin(angle) * coordinate.y;
+    coordinate.y = sin(angle) * coordinate.x + cos(angle) * coordinate.y;
     return coordinate;
 }
 
@@ -35,7 +35,7 @@ cv::Vec3f RingTracker::getCoordinate(float x, float y, float z, int wWidth, int 
 cv::Vec3f RingTracker::getPoleRange(Mat depthMat) {
     //binaryzation
     Mat grayFrame;
-    inRange(depthMat, 5.5, 6.3, grayFrame);
+    inRange(depthMat, 3.5, 4, grayFrame);
     float max = 0.75;
     float min = 0.4;
     float colsS[grayFrame.cols]{0};
@@ -95,7 +95,7 @@ cv::Vec3f RingTracker::getPoleRange(Mat depthMat) {
             rEnd = (*i)[1];
         }
         if (rStart > 0) {
-            cout << rStart << endl;
+            //cout << rStart << endl;
             endY += rStart;
             //get depth
             for (int i = rStart; i < rEnd; ++i) {
@@ -116,7 +116,7 @@ int RingTracker::getData(cv::Mat &result, Coordinate &coordinate) {
     int y0 = 0;
     Rect roi(x0, y0, result.cols / 2, result.rows);
     Vec3f res = this->getPoleRange(Mat(result, roi));
-    if (res[0] < 0)
+    if (res[0] < 0 || isnan(res[0]))
         return -1;
     res = this->getCoordinate(res[0] + x0, res[1] + y0, res[2], result.cols, result.rows);
     //z->x,x->y
