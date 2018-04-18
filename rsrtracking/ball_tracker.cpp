@@ -204,7 +204,8 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
         maxZ = 5.000;
         maxC = 15;
     } else {
-        Vec3f info = this->realCoordinates.back();
+        Vec3f info = this->ballInfo.back();
+        Vec3f realCI = this->realCoordinates.back();
         //speed 50
 //        maxX = before[0] + 100 * (this->frameI - info[0]);
 //        minX = before[0];
@@ -213,8 +214,9 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
 
         maxDi = 2 * (this->frameI - info[0]);
         minDi = 0;
-        maxZ = info[2] + 0.500 * (this->frameI - info[0]) + 0.5;
-        minZ = info[2] + 0.500 * (this->frameI - info[0]) - 0.5;
+        //make sure that ball goes far away.
+        maxZ = realCI[2] + 1.00 * (this->frameI - info[0]) + 1;
+        minZ = realCI[2] + 1.00 * (this->frameI - info[0]) - 1;
 
         minSizes = static_cast<float>(info[1] / (2 * (this->frameI - info[0])));
         Vec4f before = this->ballCoordinates.back();
@@ -235,15 +237,16 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
         float depth = this->getCircleDepth(circle, depthFrame);
         if (isnan(depth) || depth < 0)
             continue;
+        //cout << "depth:" << depth << endl;
         Vec3f coor = this->getCircleCoordinate(circle, Vec3f(0, 0, depth), depthFrame.get_width(),
                                                depthFrame.get_height());
+        if (this->ballInfo.empty())
         if (coor[2] > maxZ || coor[2] < minZ)
             continue;
         if (circle[3] > maxC)
             continue;
 
         //test
-        cout << "depth:" << depth << endl;
         cout << circle << endl;
         //judge zone when empty.if not,distance.
         if (this->ballInfo.empty()) {
@@ -350,7 +353,7 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
 //        imshow("ring", ringR);
 //        Rect rect = this->selectROIDepth("ring", ringR);
 //        cout << "rdepth:" << depthFrame.get_distance(rect.tl().x, rect.tl().y) << endl;
-        ringWatcher.ring = Vec4f(413, 170, 73, 4.32);
+        ringWatcher.ring = Vec4f(423, 360, 40, 9.32);
         ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
                                                            depthFrame.get_width(), depthFrame.get_height());
         //calculate radius .In fact,it is known.
@@ -569,7 +572,7 @@ int Tracker::operator()(DeviationPosition &position) try {
     //Add desired streams to configuration
     cfg.enable_stream(RS2_STREAM_INFRARED, 848, 480, RS2_FORMAT_Y8, 90);
     cfg.enable_stream(RS2_STREAM_DEPTH, 848, 480, RS2_FORMAT_Z16, 90);
-    //cfg.enable_stream(RS2_STREAM_COLOR, 848, 480, RS2_FORMAT_BGR8, 60);
+    cfg.enable_stream(RS2_STREAM_COLOR, 848, 480, RS2_FORMAT_BGR8, 60);
     // Start streaming with default recommended configuration
     pipe.start(cfg);
 
@@ -584,24 +587,24 @@ int Tracker::operator()(DeviationPosition &position) try {
         ++this->frameI;
         cout << "frame:" << this->frameI << endl;
         // Create OpenCV matrix of size (w,h) from the colorized depth data
-        Mat image = frame_to_mat(ir);
+        Mat image = frame_to_mat(data.get_color_frame());
         //compute result
         if (reboundTest) {
             int sure = this->surePassed(image, depthFrame);
             //test
             switch (sure) {
                 case -1:
-                    cerr << "no ball!" << endl;
+                    cerr << "s:no ball!" << endl;
                     break;
                 case 0:
-                    cout << "\033[33m" << "run" << "\033[0m" << endl;
+                    cout << "\033[33m" << "s:run" << "\033[0m" << endl;
                     break;
                 case 1:
                     cout << "\033[32m" << "sure!" << "\033[0m" << endl;
                     position.setPoint(this->dValue, 1);
                     break;
                 case 2:
-                    cout << "\033[32m" << "fail!" << "\033[0m" << endl;
+                    cout << "\033[32m" << "s:fail!" << "\033[0m" << endl;
                     position.setPoint(this->dValue, 0);
                     break;
             }

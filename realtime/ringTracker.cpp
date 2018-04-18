@@ -35,7 +35,7 @@ cv::Vec3f RingTracker::getCoordinate(float x, float y, float z, int wWidth, int 
 cv::Vec3f RingTracker::getPoleRange(Mat depthMat) {
     //binaryzation
     Mat grayFrame;
-    inRange(depthMat, 3.5, 4, grayFrame);
+    inRange(depthMat, 3.5, 5, grayFrame);
     float max = 0.75;
     float min = 0.4;
     float colsS[grayFrame.cols]{0};
