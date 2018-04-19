@@ -41,7 +41,7 @@ private:
     std::vector<cv::Vec3f> reBallInfo;
     RingWatcher ringWatcher;
     cv::Point2f dValue;
-    bool reboundTest ;
+    bool reboundTest;
 
     cv::Ptr<cv::BackgroundSubtractorMOG2> pBackgroundKnn = cv::createBackgroundSubtractorMOG2();
 
@@ -70,7 +70,9 @@ private:
     std::vector<std::vector<cv::Point>> findAllContours(cv::Mat &input, bool isDepth);
 
     std::vector<std::vector<cv::Point>> findForegroundContours(
-            cv::Mat scene, double scale);
+            cv::Mat &scene, double scale);
+
+    int pSum(cv::Mat gray);
 
     cv::Vec4f getEdgeCircle(std::vector<cv::Point> contour);
 
