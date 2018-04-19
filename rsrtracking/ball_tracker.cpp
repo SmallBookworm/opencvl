@@ -190,18 +190,21 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
     Vec3f realC;
     float cDepth;
     float cSize;
-    float minSizes, maxsizes, minX, minY, maxX, maxY, minDi, maxDi, minZ, maxZ, maxC, minR;
+    float minSizes, maxsizes, minX, minY, maxX, maxY, minDi, maxDi, minZ, maxZ, maxC, minR, maxR;
     minSizes = 10;
     maxsizes = 50;
     if (this->realCoordinates.empty()) {
+        //initial region
         maxY = resultImage.rows;
         minY = 0;
         maxX = resultImage.cols;
         minX = 0;
-        minR = 2;
-
         minZ = 1.000;
         maxZ = 5.000;
+
+        minR = 0.1;
+        maxR = 0.5;
+
         maxC = 15;
     } else {
         Vec3f info = this->ballInfo.back();
@@ -220,36 +223,43 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
 
         minSizes = static_cast<float>(info[1] / (2 * (this->frameI - info[0])));
         Vec4f before = this->ballCoordinates.back();
-        minR = before[2] / 4;
         maxC = before[3] * 2;
         maxC = 1 > maxC ? 1 : maxC;
     }
     for (auto &contour : contours) {
+        //1 point's number
         //cout<<contour.size()<<endl;
         if (contour.size() < minSizes || contour.size() > maxsizes)
             continue;
 
         Vec4f circle = this->getEdgeCircle(contour);
-        //cout << circle << endl;
-        if (circle[2] < minR)
+        //2 grade of circle
+        if (circle[3] > maxC)
             continue;
+        //cout << circle << endl;
 
         float depth = this->getCircleDepth(circle, depthFrame);
         if (isnan(depth) || depth < 0)
             continue;
         //cout << "depth:" << depth << endl;
+
+        //3 ball radius is not changed
+        //Of course,ball's radius don't change when coordinate system is changed.
+        // Horizontal FOV (HD 16:9): 64; Vertical FOV (HD 16:9): 41
+        double realR = circle[2] / (resultImage.cols / 2) * depth * tan(HANGLE / 2);
+        if (realR < minR||realR > maxR)
+            continue;
+
         Vec3f coor = this->getCircleCoordinate(circle, Vec3f(0, 0, depth), depthFrame.get_width(),
                                                depthFrame.get_height());
-        if (this->ballInfo.empty())
-        if (coor[2] > maxZ || coor[2] < minZ)
-            continue;
-        if (circle[3] > maxC)
-            continue;
 
         //test
         cout << circle << endl;
         //judge zone when empty.if not,distance.
         if (this->ballInfo.empty()) {
+            //4 initial region
+            if (coor[2] > maxZ || coor[2] < minZ)
+                continue;
             if (circle[0] > maxX || circle[0] < minX)
                 continue;
             if (circle[1] > maxY || circle[1] < minY)
@@ -516,7 +526,7 @@ int Tracker::surePassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
 }
 
 void Tracker::clearInfo() {
-    reboundTest= false;
+    reboundTest = false;
     this->ballInfo.clear();
     this->ballCoordinates.clear();
     this->realCoordinates.clear();
@@ -578,7 +588,7 @@ int Tracker::operator()(DeviationPosition &position) try {
 
     const auto window_name = "Display Image";
     namedWindow(window_name, WINDOW_AUTOSIZE);
-    bool status=position.getStop();
+    bool status = position.getStop();
     while (!status) {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
         rs2::depth_frame depthFrame = data.get_depth_frame();
@@ -587,7 +597,7 @@ int Tracker::operator()(DeviationPosition &position) try {
         ++this->frameI;
         cout << "frame:" << this->frameI << endl;
         // Create OpenCV matrix of size (w,h) from the colorized depth data
-        Mat image = frame_to_mat(data.get_color_frame());
+        Mat image = frame_to_mat(ir);
         //compute result
         if (reboundTest) {
             int sure = this->surePassed(image, depthFrame);
