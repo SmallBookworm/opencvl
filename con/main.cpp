@@ -1,6 +1,9 @@
 #include <iostream>
 #include <vector>
 #include <opencv/cv.hpp>
+#include <fcntl.h>
+#include <linux/videodev2.h>
+#include<sys/ioctl.h>
 
 using namespace cv;
 using namespace std;
@@ -12,8 +15,26 @@ get_foreground_object(Ptr<BackgroundSubtractorMOG2> pBackgroundKnn, Mat scene, d
 
 int main() {
 
-    VideoCapture capture;
-    capture.open("/home/peng/下载/realse/1.avi");
+    VideoCapture capture(1);
+    //capture.open("/home/peng/下载/realse/1.avi");
+    capture.set(CV_CAP_PROP_FRAME_WIDTH, 1920);
+    capture.set(CV_CAP_PROP_FRAME_HEIGHT, 1080);
+    int fd = open("/dev/video1", O_RDWR);
+    if (fd >= 0) {
+        struct v4l2_control ctrl;
+        ctrl.id = V4L2_CID_EXPOSURE_AUTO;
+        ctrl.value = V4L2_EXPOSURE_MANUAL;
+        int ret = ioctl(fd, VIDIOC_S_CTRL, &ctrl);
+
+        struct v4l2_control ctrl1;
+        ctrl1.id = V4L2_CID_EXPOSURE_ABSOLUTE;
+        ctrl1.value=1;
+        ret = ioctl(fd, VIDIOC_S_CTRL, &ctrl1);
+        if (ret < 0) {
+            printf("Get exposure failed (%d)\n", ret);
+        } else
+            printf("\nGet Exposure :[%d]\n", ctrl1.value);
+    }
 
     Mat srcImage;
     if (!capture.isOpened()) {
@@ -29,7 +50,7 @@ int main() {
         nCount++;
         if (srcImage.empty())
             break;
-        //imshow("show",srcImage);
+        imshow("show", srcImage);
         Mat resultImage = srcImage.clone();
 
 //        //中值滤波
@@ -122,13 +143,15 @@ int main() {
     return 0;
 }
 
-std::vector<Point2f> getContinuePoints(vector<std::vector<Point2f>> points,int continueFrames,int promise,int minFrames){
+std::vector<Point2f>
+getContinuePoints(vector<std::vector<Point2f>> points, int continueFrames, int promise, int minFrames) {
     std::vector<Point2f> result;
 }
 
-vector<int[2]> getCloseNumber(vector<Point2f> p1,vector<Point2f>p2){
+vector<int[2]> getCloseNumber(vector<Point2f> p1, vector<Point2f> p2) {
 
 }
+
 Vec4f getEdgeCircle(std::vector<Point> contour) {
     Vec4f circle;
     Point2f center;
@@ -168,8 +191,8 @@ std::vector<RotatedRect> get_foreground_object(
     medianBlur(fgmask, fgmask, 5);
 
     morphologyEx(fgmask, fgmask, MORPH_CLOSE, Mat::ones(15, 3, CV_8UC1));
-    namedWindow("MORPH_CLOSE",CV_WINDOW_NORMAL);
-    resizeWindow("MORPH_CLOSE",1080,720);
+    namedWindow("MORPH_CLOSE", CV_WINDOW_NORMAL);
+    resizeWindow("MORPH_CLOSE", 1080, 720);
     imshow("MORPH_CLOSE", fgmask);
     std::vector<std::vector<Point>> region_contours;
     findContours(fgmask, region_contours, CV_RETR_EXTERNAL,

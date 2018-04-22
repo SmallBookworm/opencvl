@@ -33,9 +33,9 @@ int LinesOption::pixheight(int i, vector<Vec4i> &a) {
 }
 
 float LinesOption::realdist(int i, vector<Vec4i> &a) {
-    return (float) sD * spix_light_height / (float) (a[i][1] - a[i][3]);//a[i][1] - a[i][3]:pixheight
+    return (float) SD * SPIX_LIGHT_HEIGHT / (float) (a[i][1] - a[i][3]);//a[i][1] - a[i][3]:pixheight
 }
 
 float LinesOption::surposepixWidth(int i, vector<Vec4i> &a) {
-    return (a[i][1] - a[i][3]) * ((float) spix_light_width / (float) spix_light_height); //a[i][1] - a[i][3]:pixheight
+    return (a[i][1] - a[i][3]) * ((float) SPIX_LIGHT_WIDTH / (float) SPIX_LIGHT_HEIGHT); //a[i][1] - a[i][3]:pixheight
 }

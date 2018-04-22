@@ -10,17 +10,18 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <math.h>
 
-#define WIDTH 1920
-#define HEIGHT 1080
-#define sD 697
-#define spix_light_height 238//灯条外接矩形的高度（像素）
-#define spix_light_width 272//灯条外接矩形的宽度（像素）
-#define sinit_angle -0.902912
-#define sinit_ld 5.784
-#define sinit_rd 2.904
-#define sreal_height 158    //mm
-#define sreal_width 182    //mm
-#define AVG 6
+const int WIDTH = 1920;
+const int HEIGHT = 1080;
+const int SD = 459;
+const int SPIX_LIGHT_HEIGHT = 488;//灯条外接矩形的高度（像素）
+const int SREAL_HEIGHT = 159;	//mm
+const int SREAL_WIDTH = 202;	//mm
+const float SPIX_LIGHT_WIDTH = SPIX_LIGHT_HEIGHT*((float)SREAL_WIDTH / (float)SREAL_HEIGHT);//灯条外接矩形的宽度（像素）
+const float SINIT_ANGLE = 0.00;
+const float SLEFTTOCENTER = -223.4;//$$$$$$$$$$$$$$$$$$
+const float SRIGHTTOCENTER = 397.5;//$$$$$$$$$$$$$$$$$$
+const int AVG = 2;
+const int contain = 3;
 
 
 class LinesOption {

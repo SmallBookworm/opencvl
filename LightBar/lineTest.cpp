@@ -39,7 +39,7 @@ bool LineTest::comp(const Vec4i &a, const Vec4i &b) {
 }
 
 float LineTest::RadianCalculate(float rleft, float rright) {
-    float radian = asinf((float) (rleft - rright) / (float) sreal_width);
+    float radian = asinf((float) (rleft - rright) / (float) SREAL_WIDTH);
     return radian;
 }
 
@@ -48,32 +48,41 @@ float LineTest::rad(float ang) {
 }
 
 float LineTest::AngleCalculate(float rleft, float rright) {
-    float radian = asinf((float) (rleft - rright) / (float) sreal_width);
+    float radian = asinf((float) (rleft - rright) / (float) SREAL_WIDTH);
     float angle = (float) radian * 180 / (float) M_PI;
     return angle;
 }
 
-vector<Vec4i> LineTest::findCorner(Mat dst, Mat src) {
+vector<Vec4i> LineTest::findCorner(Mat dst) {
     vector<vector<Point> > contours;
     vector<Vec4i> lines;
+
     cv::findContours(dst, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+    Mat imageContours = Mat::zeros(dst.size(), CV_8UC1);
     for (int i = 0; i < contours.size(); i++) {
+        Point2f P[4];
+
         if (contours[i].capacity() > 300) {
             Vec4i leftLine;
             Vec4i rightLine;
-            int averageRightDown = 0;
-            int averageRightDownNum = 0;
-            int averageLeftUp = 0;
-            int averageLeftUpNum = 0;
-            int averageLeftDown = 0;
-            int averageLeftDownNum = 0;
-            int averageRightUp = 0;
-            int averageRightUpNum = 0;
+            int averageRightDownY = 0;
+            int averageRightDownNumY = 0;
+
+            int averageLeftUpY = 0;
+            int averageLeftUpNumY = 0;
+
+            int averageLeftDownY = 0;
+            int averageLeftDownNumY = 0;
+
+            int averageRightUpY = 0;
+            int averageRightUpNumY = 0;
+
 
             int rightDown = 0;
             int rightDownD = 0;
             int leftUp = WIDTH * HEIGHT;
             int leftUpD = 0;
+
             int leftDown = 0;
             int leftDownD = 0;
             int rightUp = 0;
@@ -98,57 +107,57 @@ vector<Vec4i> LineTest::findCorner(Mat dst, Mat src) {
                 }
 
             }
-            if (contours[i][leftDownD].y - contours[i][leftUpD].y < 150 ||
-                contours[i][rightDownD].y - contours[i][rightUpD].y < 150) {
-                return lines;
-            }
             for (int j = 0; j < contours[i].size(); j++) {
-                if (contours[i][j].x > (contours[i][rightDownD].x - AVG) &&
-                    contours[i][j].x < (contours[i][rightDownD].x + AVG)) {
-                    averageRightDown += contours[i][j].x;
-                    averageRightDownNum++;
+                if (contours[i][j].y > (contours[i][rightDownD].y - AVG) &&
+                    contours[i][j].y < (contours[i][rightDownD].y + AVG)) {
+                    averageRightDownY += contours[i][j].y;
+                    averageRightDownNumY++;
                 }
-                if (contours[i][j].x > (contours[i][leftUpD].x - AVG) &&
-                    contours[i][j].x < (contours[i][leftUpD].x + AVG)) {
-                    averageLeftUp += contours[i][j].x;
-                    averageLeftUpNum++;
+                if (contours[i][j].y > (contours[i][leftUpD].y - AVG) &&
+                    contours[i][j].y < (contours[i][leftUpD].y + AVG)) {
+                    averageLeftUpY += contours[i][j].y;
+                    averageLeftUpNumY++;
                 }
-                if (contours[i][j].x > (contours[i][leftDownD].x - AVG) &&
-                    contours[i][j].x < (contours[i][leftDownD].x + AVG)) {
-                    averageLeftDown += contours[i][j].x;
-                    averageLeftDownNum++;
+                if (contours[i][j].y > (contours[i][leftDownD].y - AVG) &&
+                    contours[i][j].y < (contours[i][leftDownD].y + AVG)) {
+                    averageLeftDownY += contours[i][j].y;
+                    averageLeftDownNumY++;
                 }
-                if (contours[i][j].x > (contours[i][rightUpD].x - AVG) &&
-                    contours[i][j].x < (contours[i][rightUpD].x + AVG)) {
-                    averageRightUp += contours[i][j].x;
-                    averageRightUpNum++;
+                if (contours[i][j].y > (contours[i][rightUpD].y - AVG) &&
+                    contours[i][j].y < (contours[i][rightUpD].y + AVG)) {
+                    averageRightUpY += contours[i][j].y;
+                    averageRightUpNumY++;
                 }
-
-
             }
-            averageRightDown = averageRightDown / averageRightDownNum;
-            averageLeftUp = averageLeftUp / averageLeftUpNum;
-            averageLeftDown = averageLeftDown / averageLeftDownNum;
-            averageRightUp = averageRightUp / averageRightUpNum;
+            averageRightDownY = averageRightDownY / averageRightDownNumY;
+            averageLeftUpY = averageLeftUpY / averageLeftUpNumY;
+            averageLeftDownY = averageLeftDownY / averageLeftDownNumY;
+            averageRightUpY = averageRightUpY / averageRightUpNumY;
+            RotatedRect rect = minAreaRect(contours[i]);
+            rect.points(P);
 
-            Point rd(averageRightDown, contours[i][rightDownD].y);
-            Point lu(averageLeftUp, contours[i][leftUpD].y);
-            Point ld(averageLeftDown, contours[i][leftDownD].y);
-            Point ru(averageRightUp, contours[i][rightUpD].y);
+            for (int j = 0; j <= 3; j++)//经验值
+            {
+                line(dst, P[j], P[(j + 1) % 4], Scalar(255), 1);
 
-            /*cv::circle(src, rd, 2, cv::Scalar(255, 0, 0));
-            cv::circle(src, lu, 2, cv::Scalar(255, 0, 0));
-            cv::circle(src, ld, 2, cv::Scalar(255, 0, 0));
-            cv::circle(src, ru, 2, cv::Scalar(255, 0, 0));*/
+                if (P[j].x < rect.center.x && P[j].y > rect.center.y) {
+                    leftLine[0] = P[j].x + 1;
+                    leftLine[1] = averageLeftDownY;//左下
+                }
+                if (P[j].x < rect.center.x && P[j].y < rect.center.y) {
+                    leftLine[2] = P[j].x + 1;
+                    leftLine[3] = averageLeftUpY + 2;//左上
+                }
+                if (P[j].x > rect.center.x && P[j].y > rect.center.y) {
+                    rightLine[0] = P[j].x - 1;
+                    rightLine[1] = averageRightDownY;//右下
+                }
+                if (P[j].x > rect.center.x && P[j].y < rect.center.y) {
+                    rightLine[2] = P[j].x - 1;
+                    rightLine[3] = averageRightUpY + 2;//右上
+                }
+            }
 
-            leftLine[0] = ld.x;
-            leftLine[1] = ld.y;
-            leftLine[2] = lu.x;
-            leftLine[3] = lu.y;
-            rightLine[0] = rd.x;
-            rightLine[1] = rd.y;
-            rightLine[2] = ru.x;
-            rightLine[3] = ru.y;
             lines.push_back(leftLine);
             lines.push_back(rightLine);
         }
@@ -157,110 +166,105 @@ vector<Vec4i> LineTest::findCorner(Mat dst, Mat src) {
     return lines;
 }
 
-void LineTest::analyse(LinesOption all_line, LinesOption left_line, LinesOption right_line, LinesOption left_line2,
-                       LinesOption right_line2, vector<Vec4i> lines) {
+vector<float> LineTest::analyse(Mat paint, LinesOption all_line, LinesOption left_line, LinesOption right_line,
+                                LinesOption left_line2, LinesOption right_line2, vector<Vec4i> lines) {
 
-    //for (int i = 0; i < lines.size(); i++) {
-    //	cout << i + 1 << " ";
-    //	for (int j = 0; j < 4; j++) {
-    //		cout << lines[i][j] << " ";
-    //	}
-    //	cout << endl;
-    //}
-    //下面的点：[0]x1 [1]y1 上面的点：[2]x2 [3]y2
-    float pix_left_height = left_line.pixheight(0, lines) - 2;//-2经验值，每次都多检测大概2像素
-    float pix_right_height = right_line.pixheight(3, lines) - 2;
-    float real_left_D = left_line.realdist(0, lines);
-    float real_right_D = right_line.realdist(3, lines);
+    vector<float> all_data;
+    float pix_left_height = left_line.pixheight(0, lines);
+    float pix_right_height = right_line.pixheight(3, lines);
+    float real_left_D = left_line.realdist(0, lines);//左灯条左边的真实距离
+    float real_right_D = right_line.realdist(3, lines);//右灯条右边的真实距离
+
+    //求角度
     float pic_angle = AngleCalculate(real_left_D, real_right_D);
-    float angle = pic_angle - sinit_angle;
-    //cout << "the angle is : " << angle << endl;
+    float angle = pic_angle - SINIT_ANGLE;
     float radian = rad(angle);
-    float leftToCenter = left_line.centerPoint(0, lines).x - WIDTH / 2;
-    float rightToCenter = right_line.centerPoint(3, lines).x - WIDTH / 2;
-    const float sleftToCenter = -126;//$$$$$$$$$$$$$$$$$$
-    const float srightToCenter = 146;//$$$$$$$$$$$$$$$$$$
-    const float unit = (float) sreal_height / (float) spix_light_height;
+    float leftToCenter = left_line.centerPoint(0, lines).x - WIDTH / 2;//pix
+    float rightToCenter = right_line.centerPoint(3, lines).x - WIDTH / 2;//pix
     int r = 2;
-
-    float vectRadian;
-    float vectLength;
-    if (pix_left_height > pix_right_height) {
-        float pix_delta_x = (float) sreal_width * ((float) leftToCenter / (float) left_line.surposepixWidth(0, lines) -
-                                                   (float) sleftToCenter / (float) spix_light_width);
-        float real_delta_x = pix_delta_x * unit;
-        float real_delta_d = real_left_D - sD;
+    if (pix_left_height - pix_right_height > 2) {
+        float real_delta_x = (float) SREAL_HEIGHT * ((float) leftToCenter / (float) left_line.pixheight(0, lines) -
+                                                     (float) SLEFTTOCENTER / (float) SPIX_LIGHT_HEIGHT);//#########改过
+        float real_delta_d = real_left_D - SD;
         float a[2] = {real_delta_x, real_delta_d};
         Mat av = Mat(2, 1, CV_32FC1, a);
-        float b[2] = {sleftToCenter * (float) sreal_width / (float) spix_light_width, sD};
+        float b[2] = {SLEFTTOCENTER * (float) SREAL_WIDTH / (float) SPIX_LIGHT_WIDTH, SD};
         Mat bv = Mat(2, 1, CV_32FC1, b);
         float rotate[4] = {cosf(-radian), -sinf(-radian), sinf(-radian), cosf(-radian)};
         Mat rotatev = Mat(2, 2, CV_32FC1, rotate);
         Mat cv = rotatev * bv;
         Mat dv = bv + av - cv;
-        float *data1 = dv.ptr<float>(0);
+        float lc[2] = {0, 259};//*****************************
+        Mat locateToCamera1 = Mat(2, 1, CV_32FC1, lc);
+        Mat locateToCamera2 = rotatev * locateToCamera1;
+        Mat locateToLocate = locateToCamera1 + dv - locateToCamera2;
+        float *data1 = locateToLocate.ptr<float>(0);
         float x = data1[0];
-        float *data2 = dv.ptr<float>(0);
+        float *data2 = locateToLocate.ptr<float>(0);
         float y = data1[1];
-        vectRadian = atan2f(y, x);
-        vectLength = sqrtf(powf(x, 2) + powf(y, 2));
-        //cout << "vectRadian: " << vectRadian << endl;//
-        //cout << "vectLength: " << vectLength << endl;
+        float vectRadian = atan2f(y, x);
+        float vectLength = sqrtf(powf(x, 2) + powf(y, 2));
+        all_data.push_back(angle);
+        all_data.push_back(vectRadian);
+        all_data.push_back(vectLength);
     }
-    if (pix_right_height > pix_left_height) {
-        float pix_delta_x = (float) sreal_width *
-                            ((float) rightToCenter / (float) right_line.surposepixWidth(3, lines) -
-                             (float) srightToCenter / (float) spix_light_width);
-        float real_delta_x = pix_delta_x * unit;
-        float real_delta_d = real_right_D - sD;
+    if (pix_right_height - pix_left_height > 2) {
+        float real_delta_x = (float) SREAL_HEIGHT * ((float) rightToCenter / (float) right_line.pixheight(3, lines) -
+                                                     (float) SRIGHTTOCENTER / (float) SPIX_LIGHT_HEIGHT);
+        float real_delta_d = real_right_D - SD;
         float a[2] = {real_delta_x, real_delta_d};
         Mat av = Mat(2, 1, CV_32FC1, a);
-        float b[2] = {srightToCenter * (float) sreal_width / (float) spix_light_width, sD};
+        float b[2] = {SRIGHTTOCENTER * (float) SREAL_WIDTH / (float) SPIX_LIGHT_WIDTH, SD};
         Mat bv = Mat(2, 1, CV_32FC1, b);
         float rotate[4] = {cosf(-radian), -sinf(-radian), sinf(-radian), cosf(-radian)};
         Mat rotatev = Mat(2, 2, CV_32FC1, rotate);
         Mat cv = rotatev * bv;
         Mat dv = bv + av - cv;
-        float *data1 = dv.ptr<float>(0);
+        float lc[2] = {0, 259};//*****************************
+        Mat locateToCamera1 = Mat(2, 1, CV_32FC1, lc);
+        Mat locateToCamera2 = rotatev * locateToCamera1;
+        Mat locateToLocate = locateToCamera1 + dv - locateToCamera2;
+        float *data1 = locateToLocate.ptr<float>(0);
         float x = data1[0];
-        float *data2 = dv.ptr<float>(0);
+        float *data2 = locateToLocate.ptr<float>(0);
         float y = data1[1];
-        vectRadian = atan2f(y, x);
-        vectLength = sqrtf(powf(x, 2) + powf(y, 2));
-        //cout << "vectRadian: " << vectRadian << endl;
-        //cout << "vectLength: " << vectLength << endl;
+        float vectRadian = atan2f(y, x);
+        float vectLength = sqrtf(powf(x, 2) + powf(y, 2));
+        all_data.push_back(angle);
+        all_data.push_back(vectRadian);
+        all_data.push_back(vectLength);
     }
-    if (pix_left_height == pix_right_height) {
-        float pix_delta_x = (float) sreal_width * ((float) srightToCenter / (float) spix_light_width -
-                                                   (float) rightToCenter / (float) (right_line.pixheight(3, lines) /
-                                                                                    (float) (spix_light_height /
-                                                                                             (float) spix_light_width)));
-        float real_delta_x = pix_delta_x * unit;
-        float real_delta_d = real_right_D - sD;
+    if (abs(pix_left_height - pix_right_height) <= 2) {
+        radian = 0;
+        angle = 0;
+        float real_delta_x = (float) SREAL_HEIGHT * ((float) rightToCenter / (float) right_line.pixheight(3, lines) -
+                                                     (float) SRIGHTTOCENTER / (float) SPIX_LIGHT_HEIGHT);
+        float real_delta_d = real_right_D - SD;
         float a[2] = {real_delta_x, real_delta_d};
         Mat av = Mat(2, 1, CV_32FC1, a);
-        float b[2] = {srightToCenter * (float) sreal_width / (float) spix_light_width, sD};
+        float b[2] = {SRIGHTTOCENTER * (float) SREAL_WIDTH / (float) SPIX_LIGHT_WIDTH, SD};
         Mat bv = Mat(2, 1, CV_32FC1, b);
         float rotate[4] = {cosf(-radian), -sinf(-radian), sinf(-radian), cosf(-radian)};
         Mat rotatev = Mat(2, 2, CV_32FC1, rotate);
         Mat cv = rotatev * bv;
         Mat dv = bv + av - cv;
-        float *data1 = dv.ptr<float>(0);
+        float lc[2] = {0, 259};//*****************************
+        Mat locateToCamera1 = Mat(2, 1, CV_32FC1, lc);
+        Mat locateToCamera2 = rotatev * locateToCamera1;
+        Mat locateToLocate = locateToCamera1 + dv - locateToCamera2;
+        float *data1 = locateToLocate.ptr<float>(0);
         float x = data1[0];
-        float *data2 = dv.ptr<float>(0);
+        float *data2 = locateToLocate.ptr<float>(0);
         float y = data1[1];
-        vectRadian = atan2f(y, x);
-        vectLength = sqrtf(powf(x, 2) + powf(y, 2));
-        //cout << "vectRadian: " << vectRadian << endl;
-        //cout << "vectLength: " << vectLength << endl;
+        float vectRadian = atan2f(y, x);
+        float vectLength = sqrtf(powf(x, 2) + powf(y, 2));
+        all_data.push_back(angle);
+        all_data.push_back(vectRadian);
+        all_data.push_back(vectLength);
     }
-    this->info_value[0] = vectLength;
-    this->info_value[1] = vectRadian;
-    this->info_value[2] = angle;
-
-//    cout << "the angle is : " << angle << endl;
-//    cout << "vectRadian: " << vectRadian << endl;
-//    cout << "vectLength: " << vectLength << endl;
+    namedWindow("final", 0);
+    imshow("final", paint);
+    return all_data;
 }
 
 void LineTest::drawDetectLines(Mat &image, const vector<Vec4i> &lines, Scalar &color) {
@@ -281,34 +285,65 @@ int LineTest::watch(cv::Mat src) {
     vector<Vec4i> lines;
     Mat element = getStructuringElement(MORPH_RECT, Size(10, 10));
     Mat elementE = getStructuringElement(MORPH_RECT, Size(9, 9));
+    Mat elementC = getStructuringElement(MORPH_RECT, Size(3, 3));
+    vector<vector<float>> dateRecord;
+    int num = 0;
+
     //亮度调整
     src.convertTo(record, -1, 0.1, 0);
     //通道分离
     split(record, mv);
     //mv[2] 红 mv[1] 绿 mv[0] 蓝
     //得到差异图像，转为黑白
-    GetDiffImage(mv[0], mv[1], dst, 6);
+    GetDiffImage(mv[0], mv[1], dst, 3);
     //先膨胀，后腐蚀（联通区域）
-    cv::dilate(dst, pBinary, element);
-    cv::erode(pBinary, dst, elementE);
-    //cv::imshow("middle", dst);
-    //GaussianBlur(dst, dst, Size(5, 5), 0, 0);
+    cv::dilate(dst, pBinary, elementC);
+    cv::erode(pBinary, dst, elementC);
     //得到角点
-    lines = findCorner(dst, src);
+    lines = findCorner(dst);
+    vector<float> data;
     if (lines.size() == 4) {
-        //drawDetectLines(src, lines, Scalar(0, 255, 0));
-        analyse(all_line, left_line, right_line, left2_line, right2_line, lines);
+        Scalar sca = Scalar(0, 0, 255);
+        drawDetectLines(src, lines, sca);
+        data = analyse(src, all_line, left_line, right_line, left2_line, right2_line, lines);
+        cout << "angle: " << data[0] << endl;
+        cout << "vectRadian: " << data[1] << endl;
+        cout << "vectLength: " << data[2] << endl;
+        info_value[0]=data[2];
+        info_value[1]=data[1];
+        info_value[2]=data[0];
     } else if (lines.size() < 4) {
-        //cout << "invalid " << lines.size() << endl;
+        cout << "invalid " << lines.size() << endl;
     } else if (lines.size() > 4) {
-        //cout << "invalid " << lines.size() << endl;
+        cout << "invalid " << lines.size() << endl;
     }
     return static_cast<int>(lines.size());
 }
 
 int LineTest::operator()(LineInfo &info) {
-    VideoCapture capture;
-    capture.open("/home/peng/下载/realse/1.avi");
+    //system("v4l2-ctl --set-ctrl=exposure_auto=1 -d /dev/video1");
+
+    VideoCapture capture(1);
+    //capture.open("/home/peng/下载/realse/1.avi");
+    capture.set(CV_CAP_PROP_FRAME_WIDTH, WIDTH);
+    capture.set(CV_CAP_PROP_FRAME_HEIGHT, HEIGHT);
+
+    int fd = open("/dev/video1", O_RDWR);
+    if (fd >= 0) {
+        struct v4l2_control ctrl;
+        ctrl.id = V4L2_CID_EXPOSURE_AUTO;
+        ctrl.value = V4L2_EXPOSURE_MANUAL;
+        int ret = ioctl(fd, VIDIOC_S_CTRL, &ctrl);
+
+        struct v4l2_control ctrl1;
+        ctrl1.id = V4L2_CID_EXPOSURE_ABSOLUTE;
+        ctrl1.value=1;
+        ret = ioctl(fd, VIDIOC_S_CTRL, &ctrl1);
+        if (ret < 0) {
+            printf("Get exposure failed (%d)\n", ret);
+        } else
+            printf("\nGet Exposure :[%d]\n", ctrl1.value);
+    }
 
     Mat srcImage;
     if (!capture.isOpened()) {
@@ -316,14 +351,15 @@ int LineTest::operator()(LineInfo &info) {
         return -1;
     }
 
-    bool status=info.getStop();
+    bool status = info.getStop();
     while (!status) {
+
         capture >> srcImage;
         if (!capture.isOpened() || srcImage.empty())
             break;
         int size = watch(srcImage);
         //test
-        //cout << size << endl;
+        cout << size << endl;
         if (size == 4) {
             info.set(info_value);
         }

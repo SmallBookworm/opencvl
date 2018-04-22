@@ -206,7 +206,7 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
     maxsizes = 50;
     if (this->realCoordinates.empty()) {
         //initial region
-        maxY = resultImage.rows;
+        maxY = resultImage.rows / 2;
         minY = 0;
         maxX = resultImage.cols;
         minX = 0;
@@ -377,23 +377,30 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     //test
     imshow("MORPH_CLOSE", forground);
     //debouncing
-    double sum=forground.cols*forground.rows;
-    if ((pSum(forground)/sum)>0.5)
+    double sum = forground.cols * forground.rows;
+    if ((pSum(forground) / sum) > 0.5)
         return -1;
-        //get ring data
-        if (ringWatcher.ring[0] < 0 && this->frameI > 0) {
+
+    Mat clo = frame.clone();
+    ringWatcher.getRing(clo);
+    imshow("fuck?", clo);
+    //get ring data
+    if (ringWatcher.ring[0] < 0 && this->frameI > 10) {
 //        Mat ringR = frame.clone();
 //        imshow("ring", ringR);
 //        Rect rect = this->selectROIDepth("ring", ringR);
 //        cout << "rdepth:" << depthFrame.get_distance(rect.tl().x, rect.tl().y) << endl;
-            ringWatcher.ring = Vec4f(494, 52, 64, 5.034);
-            ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
-                                                               depthFrame.get_width(), depthFrame.get_height());
-            //calculate radius .In fact,it is known.
-            ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / (depthFrame.get_width() / 2) *
-                                               ringWatcher.ring[3] *
-                                               tan(HANGLE / 2));
-        }
+
+        ringWatcher.ring = Vec4f(494, 52, 64, 5.034);
+        ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
+                                                           depthFrame.get_width(), depthFrame.get_height());
+        //calculate radius .In fact,it is known.
+        ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / (depthFrame.get_width() / 2) *
+                                           ringWatcher.ring[3] *
+                                           tan(HANGLE / 2));
+        cout << "r:" << ringWatcher.r << endl;
+        ringWatcher.r = 0.4;
+    }
     Mat result = frame.clone();
     Vec4f circle = getBall(contours, result, depthFrame);
     // get result or restart when no ball in 5 frames
@@ -584,7 +591,6 @@ int Tracker::test() {
         ++this->frameI;
         cout << "frame:" << this->frameI << endl;
         //compute result
-        ringWatcher.getThresholdRing(depthMat);
         // Update the window with new data
         imshow(window_name, depthMat);
         contFlag = waitKey(1) < 0;
