@@ -136,25 +136,44 @@ vector<Vec4i> LineTest::findCorner(Mat dst) {
             RotatedRect rect = minAreaRect(contours[i]);
             rect.points(P);
 
+            float tempHigh1=0,tempLow1=0;
             for (int j = 0; j <= 3; j++)//经验值
             {
-                line(dst, P[j], P[(j + 1) % 4], Scalar(255), 1);
+                //line(src, P[j], P[(j + 1) % 4], Scalar(255), 2);
 
-                if (P[j].x < rect.center.x && P[j].y > rect.center.y) {
-                    leftLine[0] = P[j].x + 1;
-                    leftLine[1] = averageLeftDownY;//左下
+                if (P[j].y >rect.center.y) {
+                    if (tempHigh1 == 0) {
+                        tempHigh1 = P[j].x;
+                    }
+                    if (tempHigh1 > P[j].x) {
+                        leftLine[0] = tempHigh1+1;
+                        leftLine[1] = averageLeftDownY;//左下
+                        rightLine[0] = P[j].x + 1;
+                        rightLine[1] = averageRightDownY;//右下
+                    }
+                    if (tempHigh1 < P[j].x) {
+                        rightLine[0] = tempHigh1 + 1;
+                        rightLine[1] = averageLeftDownY;//左下
+                        leftLine[0] = P[j].x-1;
+                        leftLine[1] = averageRightDownY;//右下
+                    }
                 }
-                if (P[j].x < rect.center.x && P[j].y < rect.center.y) {
-                    leftLine[2] = P[j].x + 1;
-                    leftLine[3] = averageLeftUpY + 2;//左上
-                }
-                if (P[j].x > rect.center.x && P[j].y > rect.center.y) {
-                    rightLine[0] = P[j].x - 1;
-                    rightLine[1] = averageRightDownY;//右下
-                }
-                if (P[j].x > rect.center.x && P[j].y < rect.center.y) {
-                    rightLine[2] = P[j].x - 1;
-                    rightLine[3] = averageRightUpY + 2;//右上
+                if (P[j].y <rect.center.y) {
+                    if (tempLow1 == 0) {
+                        tempLow1 = P[j].x;
+                    }
+                    if (tempLow1 > P[j].x) {
+                        leftLine[2] = tempLow1 + 1;
+                        leftLine[3] = averageLeftUpY;//左上
+                        rightLine[2] = P[j].x - 1;
+                        rightLine[3] = averageRightUpY;//右上
+                    }
+                    if (tempLow1 < P[j].x) {
+                        rightLine[2] = tempLow1 + 1;
+                        rightLine[3] = averageLeftUpY;//左上
+                        leftLine[2] = P[j].x -1;
+                        leftLine[3] = averageRightUpY;//右上
+                    }
                 }
             }
 
@@ -203,9 +222,10 @@ vector<float> LineTest::analyse(Mat paint, LinesOption all_line, LinesOption lef
         float *data2 = locateToLocate.ptr<float>(0);
         float y = data1[1];
         float vectRadian = atan2f(y, x);
+        float vectAngle = 180*(float)vectRadian/(float)M_PI;
         float vectLength = sqrtf(powf(x, 2) + powf(y, 2));
         all_data.push_back(angle);
-        all_data.push_back(vectRadian);
+        all_data.push_back(vectAngle);
         all_data.push_back(vectLength);
     }
     if (pix_right_height - pix_left_height > 2) {
@@ -229,9 +249,10 @@ vector<float> LineTest::analyse(Mat paint, LinesOption all_line, LinesOption lef
         float *data2 = locateToLocate.ptr<float>(0);
         float y = data1[1];
         float vectRadian = atan2f(y, x);
+        float vectAngle = 180*(float)vectRadian/(float)M_PI;
         float vectLength = sqrtf(powf(x, 2) + powf(y, 2));
         all_data.push_back(angle);
-        all_data.push_back(vectRadian);
+        all_data.push_back(vectAngle);
         all_data.push_back(vectLength);
     }
     if (abs(pix_left_height - pix_right_height) <= 2) {
@@ -257,9 +278,10 @@ vector<float> LineTest::analyse(Mat paint, LinesOption all_line, LinesOption lef
         float *data2 = locateToLocate.ptr<float>(0);
         float y = data1[1];
         float vectRadian = atan2f(y, x);
+        float vectAngle = 180*(float)vectRadian/(float)M_PI;
         float vectLength = sqrtf(powf(x, 2) + powf(y, 2));
         all_data.push_back(angle);
-        all_data.push_back(vectRadian);
+        all_data.push_back(vectAngle);
         all_data.push_back(vectLength);
     }
     namedWindow("final", 0);
@@ -295,7 +317,7 @@ int LineTest::watch(cv::Mat src) {
     split(record, mv);
     //mv[2] 红 mv[1] 绿 mv[0] 蓝
     //得到差异图像，转为黑白
-    GetDiffImage(mv[0], mv[1], dst, 3);
+    GetDiffImage(mv[0], mv[1], dst, 5);
     //先膨胀，后腐蚀（联通区域）
     cv::dilate(dst, pBinary, elementC);
     cv::erode(pBinary, dst, elementC);
@@ -306,16 +328,16 @@ int LineTest::watch(cv::Mat src) {
         Scalar sca = Scalar(0, 0, 255);
         drawDetectLines(src, lines, sca);
         data = analyse(src, all_line, left_line, right_line, left2_line, right2_line, lines);
-        cout << "angle: " << data[0] << endl;
-        cout << "vectRadian: " << data[1] << endl;
-        cout << "vectLength: " << data[2] << endl;
+        //cout << "angle: " << data[0] << endl;
+        //cout << "vectRadian: " << data[1] << endl;
+        //cout << "vectLength: " << data[2] << endl;
         info_value[0]=data[2];
         info_value[1]=data[1];
         info_value[2]=data[0];
     } else if (lines.size() < 4) {
-        cout << "invalid " << lines.size() << endl;
+        //cout << "invalid " << lines.size() << endl;
     } else if (lines.size() > 4) {
-        cout << "invalid " << lines.size() << endl;
+        //cout << "invalid " << lines.size() << endl;
     }
     return static_cast<int>(lines.size());
 }
@@ -359,7 +381,7 @@ int LineTest::operator()(LineInfo &info) {
             break;
         int size = watch(srcImage);
         //test
-        cout << size << endl;
+        //cout << size << endl;
         if (size == 4) {
             info.set(info_value);
         }
