@@ -9,9 +9,9 @@ using namespace cv;
 int main() {
     DeviationPosition position;
     Tracker tracker;
-    //thread thread1(tracker,ref(position));
-    //thread1.detach();
-    tracker.test();
+    thread thread1(tracker,ref(position));
+    thread1.detach();
+    //tracker.test();
     getchar();
     Point2f point2f;
     if (position.getPoint(point2f) > 0)

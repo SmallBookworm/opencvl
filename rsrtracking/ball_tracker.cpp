@@ -436,7 +436,7 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
 //        Rect rect = this->selectROIDepth("ring", ringR);
 //        cout << "rdepth:" << depthFrame.get_distance(rect.tl().x, rect.tl().y) << endl;
 
-        ringWatcher.ring = Vec4f(354, 103, 60, 5.334);
+        ringWatcher.ring = Vec4f(384, 103, 60, 5.334);
         ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
                                                            depthFrame.get_width(), depthFrame.get_height());
         //calculate radius ,it is wrong when camera doesn't look at the front horizontally.In fact,it is known.
@@ -743,6 +743,7 @@ int Tracker::operator()(DeviationPosition &position) try {
                     cout << "\033[32m" << "success!" << "\033[0m" << endl;
                     position.setPoint(this->dValue, 1);
                     cout << dValue << endl;
+                    this->clearInfo();
                     break;
                 case 2:
                     cout << "\033[32m" << "fail!" << "\033[0m" << endl;

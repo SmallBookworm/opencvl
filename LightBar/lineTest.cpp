@@ -386,10 +386,10 @@ int LineTest::operator()(LineInfo &info) {
             info.set(info_value);
         }
         //test
-        imshow("show", srcImage);
-        if (waitKey(1) == 27) {
-            break;
-        }
+//        imshow("show", srcImage);
+//        if (waitKey(1) == 27) {
+//            break;
+//        }
         status = info.getStop();
     };
     return 0;
