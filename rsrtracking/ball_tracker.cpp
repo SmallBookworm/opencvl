@@ -321,11 +321,12 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
 
 int Tracker::passCF() {
     unsigned long size = this->ballInfo.size();
-    if (size >= 2) {
+    //when size is 2,fit line.
+    if (size == 2) {
         //ball coordinates in ring's plane (x,y,z)
         Vec3f point;
-        point[2] = ringWatcher.ring[3];
-
+        point[2] = ringWatcher.coordinate[2];
+        //x
         vector<float> xs, ys;
         for (int i = 0; i < size; ++i) {
             //x
@@ -335,7 +336,50 @@ int Tracker::passCF() {
         }
         vector<float> func1 = this->curveFitting(xs, ys, 1);
         point[0] = (point[2] - func1[0]) / func1[1];
+        //y
+        xs.clear();
+        ys.clear();
+        for (int i = 0; i < size; ++i) {
+            //y
+            xs.push_back(this->realCoordinates[i][1]);
+            //z
+            ys.push_back(this->realCoordinates[i][2]);
+        }
+        vector<float> func2 = this->curveFitting(xs, ys, 1);
+        point[1] = (point[2] - func2[0]) / func2[1];
 
+        double dis = this->realDistance(ringWatcher.coordinate, point);
+        //d-value
+        Vec3f dv = point - ringWatcher.coordinate;
+        this->dValue.x = -dv[0];
+        this->dValue.y = dv[1];
+
+        float br = this->ballCoordinates.back()[2];
+        float bdepth = this->ballInfo.back()[2];
+        //Of course,ball's radius don't change when coordinate system is changed.
+        // Horizontal FOV (HD 16:9): 64; Vertical FOV (HD 16:9): 41
+        double realR = br / (848 / 2) * bdepth * tan(HANGLE / 2);
+        if (realR + dis < ringWatcher.r)
+            return 1;
+        else if (dis < ringWatcher.r)
+            return 3;
+        else
+            return 2;
+    } else if (size > 2) {
+        //ball coordinates in ring's plane (x,y,z)
+        Vec3f point;
+        point[2] = ringWatcher.coordinate[2];
+        //x
+        vector<float> xs, ys;
+        for (int i = 0; i < size; ++i) {
+            //x
+            xs.push_back(this->realCoordinates[i][0]);
+            //z
+            ys.push_back(this->realCoordinates[i][2]);
+        }
+        vector<float> func1 = this->curveFitting(xs, ys, 1);
+        point[0] = (point[2] - func1[0]) / func1[1];
+        //y
         float b = func1[1];
         //1/sin(a)
         double bc = sqrt(pow(1 / b, 2) + 1);
@@ -347,10 +391,11 @@ int Tracker::passCF() {
         }
         Vec3f func2 = this->x2curveFitting(xs, ys);
         point[1] = static_cast<float>(func2[0] + func2[1] * point[2] * bc + func2[2] * pow(point[2] * bc, 2));
+
         double dis = this->realDistance(ringWatcher.coordinate, point);
         //d-value
         Vec3f dv = point - ringWatcher.coordinate;
-        this->dValue.x = dv[0];
+        this->dValue.x = -dv[0];
         this->dValue.y = dv[1];
 
         float br = this->ballCoordinates.back()[2];
@@ -380,10 +425,10 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     double sum = forground.cols * forground.rows;
     if ((pSum(forground) / sum) > 0.5)
         return -1;
-
-    Mat clo = frame.clone();
-    ringWatcher.getRing(clo);
-    imshow("fuck?", clo);
+//test ring-wather
+//    Mat clo = frame.clone();
+//    ringWatcher.getRing(clo);
+//    imshow("fuck?", clo);
     //get ring data
     if (ringWatcher.ring[0] < 0 && this->frameI > 10) {
 //        Mat ringR = frame.clone();
@@ -391,15 +436,16 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
 //        Rect rect = this->selectROIDepth("ring", ringR);
 //        cout << "rdepth:" << depthFrame.get_distance(rect.tl().x, rect.tl().y) << endl;
 
-        ringWatcher.ring = Vec4f(494, 52, 64, 5.034);
+        ringWatcher.ring = Vec4f(354, 103, 60, 5.334);
         ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
                                                            depthFrame.get_width(), depthFrame.get_height());
-        //calculate radius .In fact,it is known.
+        //calculate radius ,it is wrong when camera doesn't look at the front horizontally.In fact,it is known.
         ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / (depthFrame.get_width() / 2) *
                                            ringWatcher.ring[3] *
                                            tan(HANGLE / 2));
         cout << "r:" << ringWatcher.r << endl;
-        ringWatcher.r = 0.4;
+        cout << "coor" << ringWatcher.coordinate << endl;
+        //ringWatcher.r = 0.4;
     }
     Mat result = frame.clone();
     Vec4f circle = getBall(contours, result, depthFrame);
@@ -566,37 +612,72 @@ void Tracker::clearInfo() {
 }
 
 int Tracker::test() {
-    // Declare depth colorizer for pretty visualization of depth data
-    rs2::colorizer color_map;
+//    // Declare depth colorizer for pretty visualization of depth data
+//    rs2::colorizer color_map;
+//
+//    // Declare RealSense pipeline, encapsulating the actual device and sensors
+//    rs2::pipeline pipe;
+//    //Create a configuration for configuring the pipeline with a non default profile
+//    rs2::config cfg;
+//    //Add desired streams to configuration
+//    cfg.enable_stream(RS2_STREAM_INFRARED, 1280, 720, RS2_FORMAT_Y8, 30);
+//    cfg.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 30);
+//    //cfg.enable_stream(RS2_STREAM_COLOR, 848, 480, RS2_FORMAT_BGR8, 30);
+//    // Start streaming with default recommended configuration
+//    pipe.start(cfg);
+//
+//    const auto window_name = "Display Image";
+//    namedWindow(window_name, WINDOW_AUTOSIZE);
+//    bool contFlag = true;
+//    while (contFlag) {
+//        rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
+//        rs2::depth_frame depthFrame = data.get_depth_frame();
+//        Mat depthMat = depth_frame_to_meters(pipe, depthFrame);
+//        inRange(depthMat, 5.5, 6.3, depthMat);
+//        ++this->frameI;
+//        cout << "frame:" << this->frameI << endl;
+//        //compute result
+//        // Update the window with new data
+//        imshow(window_name, depthMat);
+//        contFlag = waitKey(1) < 0;
+//    }
+//
+//    return EXIT_SUCCESS;
+    Vec3f point;
+    point[2] = 5.334;
+    vector<float> xs, ys;
+    //x
+    xs.push_back(0.63);
+    xs.push_back(0.73);
+    //z
+    ys.push_back(4.26);
+    ys.push_back(5.4);
 
-    // Declare RealSense pipeline, encapsulating the actual device and sensors
-    rs2::pipeline pipe;
-    //Create a configuration for configuring the pipeline with a non default profile
-    rs2::config cfg;
-    //Add desired streams to configuration
-    cfg.enable_stream(RS2_STREAM_INFRARED, 1280, 720, RS2_FORMAT_Y8, 30);
-    cfg.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 30);
-    //cfg.enable_stream(RS2_STREAM_COLOR, 848, 480, RS2_FORMAT_BGR8, 30);
-    // Start streaming with default recommended configuration
-    pipe.start(cfg);
+    vector<float> func1 = this->curveFitting(xs, ys, 1);
+    point[0] = (point[2] - func1[0]) / func1[1];
+    cout << point[0] << endl;
+    float b = func1[1];
+    //1/sin(a)
+    double bc = sqrt(pow(1 / b, 2) + 1);
+    cout << bc << endl;
+    xs.clear();
+    ys.clear();
+    xs.push_back(static_cast<float &&>(1));
+    ys.push_back(2);
 
-    const auto window_name = "Display Image";
-    namedWindow(window_name, WINDOW_AUTOSIZE);
-    bool contFlag = true;
-    while (contFlag) {
-        rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
-        rs2::depth_frame depthFrame = data.get_depth_frame();
-        Mat depthMat = depth_frame_to_meters(pipe, depthFrame);
-        inRange(depthMat, 5.5, 6.3, depthMat);
-        ++this->frameI;
-        cout << "frame:" << this->frameI << endl;
-        //compute result
-        // Update the window with new data
-        imshow(window_name, depthMat);
-        contFlag = waitKey(1) < 0;
-    }
-
-    return EXIT_SUCCESS;
+    xs.push_back(static_cast<float &&>(0));
+    ys.push_back(1);
+    xs.push_back(static_cast<float &&>(2));
+    ys.push_back(4);
+    Vec3f func2 = this->x2curveFitting(xs, ys);
+    cout << func2 << endl;
+    point[1] = static_cast<float>(func2[0] + func2[1] * point[2] * bc + func2[2] * pow(point[2] * bc, 2));
+    cout << point[1] << endl;
+    double dis = this->realDistance(ringWatcher.coordinate, point);
+    //d-value
+    Vec3f dv = point - ringWatcher.coordinate;
+    this->dValue.x = -dv[0];
+    this->dValue.y = dv[1];
 }
 
 
@@ -661,15 +742,18 @@ int Tracker::operator()(DeviationPosition &position) try {
                 case 1:
                     cout << "\033[32m" << "success!" << "\033[0m" << endl;
                     position.setPoint(this->dValue, 1);
+                    cout << dValue << endl;
                     break;
                 case 2:
                     cout << "\033[32m" << "fail!" << "\033[0m" << endl;
                     position.setPoint(this->dValue, 0);
+                    cout << dValue << endl;
                     this->clearInfo();
                     break;
                 case 3:
                     cout << "\033[32m" << "no sure!" << "\033[0m" << endl;
                     reboundTest = true;
+                    cout << dValue << endl;
                     break;
             }
         }
