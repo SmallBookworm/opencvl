@@ -23,14 +23,13 @@ private:
     cv::Vec3f ring;
     std::mutex ring_mutex;
 public:
-    explicit DeviationPosition( cv::Vec3f in) {
+    explicit DeviationPosition() {
         state = -1;
         used = true;
         stop = false;
-        ring=in;
     }
 
-    void init();
+    void init(cv::Vec3f in);
 
     //-1 no info
     int getPoint(cv::Point2f &out);
@@ -42,6 +41,8 @@ public:
     bool getStop();
 
     cv::Vec3f getRing();
+
+    void setRing(cv::Vec3f in);
 };
 
 

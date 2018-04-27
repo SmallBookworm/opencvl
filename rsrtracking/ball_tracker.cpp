@@ -676,6 +676,7 @@ int Tracker::test() {
 
 // move-constructible function object (i.e., an object whose class defines operator(), including closures and function objects).
 int Tracker::operator()(DeviationPosition &position) try {
+    cout<<position.getRing()<<endl;
     // Declare depth colorizer for pretty visualization of depth data
     rs2::colorizer color_map;
 

@@ -34,14 +34,23 @@ void DeviationPosition::setStop(bool f) {
     stop = f;
 }
 
-void DeviationPosition::init() {
+cv::Vec3f DeviationPosition::getRing() {
+    lock_guard<mutex> l(ring_mutex);
+    return this->ring;
+}
+
+void DeviationPosition::setRing(cv::Vec3f in) {
+    lock_guard<mutex> l(ring_mutex);
+    this->ring = in;
+}
+
+
+void DeviationPosition::init(cv::Vec3f in) {
     lock_guard<mutex> l(coor_mutex);
     lock_guard<mutex> s(stop_mutex);
+    lock_guard<mutex> k(ring_mutex);
     state = -1;
     used = true;
     stop = false;
-}
-
-cv::Vec3f DeviationPosition::getRing() {
-    return this->ring;
+    ring = in;
 }
