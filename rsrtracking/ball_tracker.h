@@ -5,7 +5,7 @@
 #ifndef DEPTHTRACK_BALL_TRACKER_H
 #define DEPTHTRACK_BALL_TRACKER_H
 
-#define SENSEANGLE (0.0 / 180 * M_PI)
+#define SENSEANGLE (45.0 / 180 * M_PI)
 #define HANGLE (64.0 / 180 * M_PI)
 #define VANGLE (41.0 / 180 * M_PI)
 

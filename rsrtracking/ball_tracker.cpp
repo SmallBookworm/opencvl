@@ -158,8 +158,9 @@ cv::Vec3f Tracker::getCircleCoordinate(cv::Vec4f circle, cv::Vec3f info, int wWi
     coordinate[1] = static_cast<float>(info[2] * tan(VANGLE / 2) * (wHeight / 2 - circle[1]) /
                                        (wHeight / 2));
     //change coordinate system
-    coordinate[1] = static_cast<float>(cos(SENSEANGLE) * coordinate[1] + sin(SENSEANGLE) * coordinate[2]);
-    coordinate[2] = static_cast<float>(cos(SENSEANGLE) * coordinate[2] - sin(SENSEANGLE) * coordinate[1]);
+    float c1=coordinate[1],c2=coordinate[2];
+    coordinate[1] = static_cast<float>(cos(SENSEANGLE) * c1 + sin(SENSEANGLE) * c2);
+    coordinate[2] = static_cast<float>(cos(SENSEANGLE) * c2 - sin(SENSEANGLE) * c1);
     return coordinate;
 }
 
@@ -706,21 +707,22 @@ int Tracker::operator()(DeviationPosition &position) try {
 
         //get ring data
         if (ringWatcher.ring[0] < 0 && this->frameI > 10) {
-//        Mat ringR = frame.clone();
+//        Mat ringR = image.clone();
 //        imshow("ring", ringR);
 //        Rect rect = this->selectROIDepth("ring", ringR);
 //        cout << "rdepth:" << depthFrame.get_distance(rect.tl().x, rect.tl().y) << endl;
 
-            ringWatcher.ring = Vec4f(384, 103, 60, 5.334);
+            ringWatcher.ring = Vec4f(409, 327, 60, 4.269);
             ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
                                                                depthFrame.get_width(), depthFrame.get_height());
             //calculate radius ,it is wrong when camera doesn't look at the front horizontally.In fact,it is known.
             ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / (depthFrame.get_width() / 2) *
                                                ringWatcher.ring[3] *
                                                tan(HANGLE / 2));
+
             cout << "r:" << ringWatcher.r << endl;
             cout << "coor" << ringWatcher.coordinate << endl;
-            //ringWatcher.r = 0.4;
+            ringWatcher.r = 0.4;
         }
 
         //compute result
