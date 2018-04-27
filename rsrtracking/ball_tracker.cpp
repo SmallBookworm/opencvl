@@ -429,24 +429,7 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
 //    Mat clo = frame.clone();
 //    ringWatcher.getRing(clo);
 //    imshow("fuck?", clo);
-    //get ring data
-    if (ringWatcher.ring[0] < 0 && this->frameI > 10) {
-//        Mat ringR = frame.clone();
-//        imshow("ring", ringR);
-//        Rect rect = this->selectROIDepth("ring", ringR);
-//        cout << "rdepth:" << depthFrame.get_distance(rect.tl().x, rect.tl().y) << endl;
 
-        ringWatcher.ring = Vec4f(384, 103, 60, 5.334);
-        ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
-                                                           depthFrame.get_width(), depthFrame.get_height());
-        //calculate radius ,it is wrong when camera doesn't look at the front horizontally.In fact,it is known.
-        ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / (depthFrame.get_width() / 2) *
-                                           ringWatcher.ring[3] *
-                                           tan(HANGLE / 2));
-        cout << "r:" << ringWatcher.r << endl;
-        cout << "coor" << ringWatcher.coordinate << endl;
-        //ringWatcher.r = 0.4;
-    }
     Mat result = frame.clone();
     Vec4f circle = getBall(contours, result, depthFrame);
     // get result or restart when no ball in 5 frames
@@ -643,6 +626,16 @@ int Tracker::test() {
 //    }
 //
 //    return EXIT_SUCCESS;
+    ringWatcher.ring = Vec4f(384, 103, 60, 5.334);
+    ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
+                                                       848, 480);
+    //calculate radius ,it is wrong when camera doesn't look at the front horizontally.In fact,it is known.
+    ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / (848 / 2) *
+                                       ringWatcher.ring[3] *
+                                       tan(HANGLE / 2));
+    cout << "r:" << ringWatcher.r << endl;
+    cout << "coor" << ringWatcher.coordinate << endl;
+
     Vec3f point;
     point[2] = 5.334;
     vector<float> xs, ys;
@@ -709,6 +702,26 @@ int Tracker::operator()(DeviationPosition &position) try {
         cout << "frame:" << this->frameI << endl;
         // Create OpenCV matrix of size (w,h) from the colorized depth data
         Mat image = frame_to_mat(data.get_color_frame());
+
+        //get ring data
+        if (ringWatcher.ring[0] < 0 && this->frameI > 10) {
+//        Mat ringR = frame.clone();
+//        imshow("ring", ringR);
+//        Rect rect = this->selectROIDepth("ring", ringR);
+//        cout << "rdepth:" << depthFrame.get_distance(rect.tl().x, rect.tl().y) << endl;
+
+            ringWatcher.ring = Vec4f(384, 103, 60, 5.334);
+            ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
+                                                               depthFrame.get_width(), depthFrame.get_height());
+            //calculate radius ,it is wrong when camera doesn't look at the front horizontally.In fact,it is known.
+            ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / (depthFrame.get_width() / 2) *
+                                               ringWatcher.ring[3] *
+                                               tan(HANGLE / 2));
+            cout << "r:" << ringWatcher.r << endl;
+            cout << "coor" << ringWatcher.coordinate << endl;
+            //ringWatcher.r = 0.4;
+        }
+
         //compute result
         if (reboundTest) {
             int sure = this->surePassed(image, depthFrame);

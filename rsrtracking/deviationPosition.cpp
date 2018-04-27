@@ -41,3 +41,7 @@ void DeviationPosition::init() {
     used = true;
     stop = false;
 }
+
+cv::Vec3f DeviationPosition::getRing() {
+    return this->ring;
+}

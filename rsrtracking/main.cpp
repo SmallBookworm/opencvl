@@ -7,9 +7,9 @@ using namespace std;
 using namespace cv;
 
 int main() {
-    DeviationPosition position;
+    DeviationPosition position(Vec3f(0.314, 1.138, 5.334));
     Tracker tracker;
-    thread thread1(tracker,ref(position));
+    thread thread1(tracker, ref(position));
     thread1.detach();
     //tracker.test();
     getchar();

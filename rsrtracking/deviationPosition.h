@@ -18,11 +18,16 @@ private:
 private:
     bool stop;
     std::mutex stop_mutex;
+private:
+    //real x,y,z
+    cv::Vec3f ring;
+    std::mutex ring_mutex;
 public:
-    explicit DeviationPosition() {
+    explicit DeviationPosition( cv::Vec3f in) {
         state = -1;
         used = true;
         stop = false;
+        ring=in;
     }
 
     void init();
@@ -35,6 +40,8 @@ public:
     void setStop(bool f);
 
     bool getStop();
+
+    cv::Vec3f getRing();
 };
 
 

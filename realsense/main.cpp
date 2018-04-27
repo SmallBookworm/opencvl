@@ -34,10 +34,10 @@ int thr() try {
     while (contFlag) {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
         rs2::depth_frame depthFrame = data.get_depth_frame();
-        //rs2::frame depth = color_map(depthFrame);
+        rs2::frame depth = color_map(depthFrame);
         rs2::frame color = data.get_color_frame();
         rs2::frame ir = data.get_infrared_frame();
-        Mat imaged = frame_to_mat(depthFrame);
+        Mat imaged = frame_to_mat(depth);
         Mat imagec = frame_to_mat(color);
         Mat imagei = frame_to_mat(ir);
 //        vDepth << imaged;
