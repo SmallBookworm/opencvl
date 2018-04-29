@@ -258,12 +258,12 @@ vector<float> LineTest::analyse(Mat paint, LinesOption all_line, LinesOption lef
     if (abs(pix_left_height - pix_right_height) <= 2) {
         radian = 0;
         angle = 0;
-        float real_delta_x = (float) SREAL_HEIGHT * ((float) rightToCenter / (float) right_line.pixheight(3, lines) -
-                                                     (float) SRIGHTTOCENTER / (float) SPIX_LIGHT_HEIGHT);
-        float real_delta_d = real_right_D - SD;
+        float real_delta_x = (float) SREAL_HEIGHT * ((float) leftToCenter / (((float) left_line.pixheight(0, lines)+(float)right_line.pixheight(3,lines))/2) -
+                                                     (float) SLEFTTOCENTER / (float) SPIX_LIGHT_HEIGHT);//#########改过
+        float real_delta_d = real_left_D - SD;
         float a[2] = {real_delta_x, real_delta_d};
         Mat av = Mat(2, 1, CV_32FC1, a);
-        float b[2] = {SRIGHTTOCENTER * (float) SREAL_WIDTH / (float) SPIX_LIGHT_WIDTH, SD};
+        float b[2] = {SLEFTTOCENTER * (float) SREAL_WIDTH / (float) SPIX_LIGHT_WIDTH, SD};
         Mat bv = Mat(2, 1, CV_32FC1, b);
         float rotate[4] = {cosf(-radian), -sinf(-radian), sinf(-radian), cosf(-radian)};
         Mat rotatev = Mat(2, 2, CV_32FC1, rotate);
@@ -345,27 +345,27 @@ int LineTest::watch(cv::Mat src) {
 int LineTest::operator()(LineInfo &info) {
     //system("v4l2-ctl --set-ctrl=exposure_auto=1 -d /dev/video1");
 
-    VideoCapture capture(1);
+    VideoCapture capture(0);
     //capture.open("/home/peng/下载/realse/1.avi");
-    capture.set(CV_CAP_PROP_FRAME_WIDTH, WIDTH);
-    capture.set(CV_CAP_PROP_FRAME_HEIGHT, HEIGHT);
+//    capture.set(CV_CAP_PROP_FRAME_WIDTH, WIDTH);
+//    capture.set(CV_CAP_PROP_FRAME_HEIGHT, HEIGHT);
 
-    int fd = open("/dev/video1", O_RDWR);
-    if (fd >= 0) {
-        struct v4l2_control ctrl;
-        ctrl.id = V4L2_CID_EXPOSURE_AUTO;
-        ctrl.value = V4L2_EXPOSURE_MANUAL;
-        int ret = ioctl(fd, VIDIOC_S_CTRL, &ctrl);
-
-        struct v4l2_control ctrl1;
-        ctrl1.id = V4L2_CID_EXPOSURE_ABSOLUTE;
-        ctrl1.value=1;
-        ret = ioctl(fd, VIDIOC_S_CTRL, &ctrl1);
-        if (ret < 0) {
-            printf("Get exposure failed (%d)\n", ret);
-        } else
-            printf("\nGet Exposure :[%d]\n", ctrl1.value);
-    }
+//    int fd = open("/dev/video1", O_RDWR);
+//    if (fd >= 0) {
+//        struct v4l2_control ctrl;
+//        ctrl.id = V4L2_CID_EXPOSURE_AUTO;
+//        ctrl.value = V4L2_EXPOSURE_MANUAL;
+//        int ret = ioctl(fd, VIDIOC_S_CTRL, &ctrl);
+//
+//        struct v4l2_control ctrl1;
+//        ctrl1.id = V4L2_CID_EXPOSURE_ABSOLUTE;
+//        ctrl1.value=1;
+//        ret = ioctl(fd, VIDIOC_S_CTRL, &ctrl1);
+//        if (ret < 0) {
+//            printf("Get exposure failed (%d)\n", ret);
+//        } else
+//            printf("\nGet Exposure :[%d]\n", ctrl1.value);
+//    }
 
     Mat srcImage;
     if (!capture.isOpened()) {

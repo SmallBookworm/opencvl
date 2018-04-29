@@ -59,7 +59,7 @@ private:
     std::vector<float> curveFitting(std::vector<float> x, std::vector<float> y, int dimension);
 
     //-1 insufficient information(restart),1 pass,2 not pass,3 not sure
-    int passCF();
+    int passCF(cv::Mat &frame);
 
     //-1 no ball,0 ball run,1 pass,2 not pass,3 not sure.don't clear info when it return 0,1,2,3.
     int isPassed(cv::Mat &frame, rs2::depth_frame depthFrame);

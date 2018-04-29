@@ -8,11 +8,13 @@ using namespace cv;
 
 int main() {
     DeviationPosition position;
-    position.init(Vec3f(0.314, 1.138, 5.334));
+    position.await();
     Tracker tracker;
     thread thread1(tracker, ref(position));
     thread1.detach();
     //tracker.test();
+    getchar();
+    position.init(Vec3f(0.314, 1.138, 5.334));
     getchar();
     Point2f point2f;
     if (position.getPoint(point2f) > 0)

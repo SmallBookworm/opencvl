@@ -19,6 +19,9 @@ private:
     bool stop;
     std::mutex stop_mutex;
 private:
+    bool standby;
+    std::mutex stby_mutex;
+private:
     //real x,y,z
     cv::Vec3f ring;
     std::mutex ring_mutex;
@@ -27,9 +30,12 @@ public:
         state = -1;
         used = true;
         stop = false;
+        standby = true;
     }
 
     void init(cv::Vec3f in);
+
+    void await();
 
     //-1 no info
     int getPoint(cv::Point2f &out);
@@ -39,6 +45,10 @@ public:
     void setStop(bool f);
 
     bool getStop();
+
+    void setStby(bool s);
+
+    bool getStby();
 
     cv::Vec3f getRing();
 

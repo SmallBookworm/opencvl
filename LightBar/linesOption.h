@@ -12,14 +12,14 @@
 
 const int WIDTH = 1280;
 const int HEIGHT = 720;
-const int SD = 459;
-const int SPIX_LIGHT_HEIGHT = 324;//灯条外接矩形的高度（像素）
-const int SREAL_HEIGHT = 159;	//mm
-const int SREAL_WIDTH = 202;	//mm
+const int SD = 577;
+const int SPIX_LIGHT_HEIGHT = 272;//灯条外接矩形的高度（像素）
+const int SREAL_HEIGHT = 150;	//mm
+const int SREAL_WIDTH = 190;	//mm
 const float SPIX_LIGHT_WIDTH = SPIX_LIGHT_HEIGHT*((float)SREAL_WIDTH / (float)SREAL_HEIGHT);//灯条外接矩形的宽度（像素）
 const float SINIT_ANGLE = 0.00;
-const float SLEFTTOCENTER = -149;//$$$$$$$$$$$$$$$$$$
-const float SRIGHTTOCENTER = 264.5;//$$$$$$$$$$$$$$$$$$
+const float SLEFTTOCENTER = -156.7;//$$$$$$$$$$$$$$$$$$
+const float SRIGHTTOCENTER = 189;//$$$$$$$$$$$$$$$$$$
 const int AVG = 2;
 const int contain = 3;
 
