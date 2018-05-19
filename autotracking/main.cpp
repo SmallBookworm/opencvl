@@ -14,7 +14,7 @@ vector<RotatedRect> trackingObjectR2(Mat frame, Rect2d rect, double maxD, double
 
 RotatedRect bestRect(vector<RotatedRect> rects, double x, double y);
 
-vector<RotatedRect> findObject(Mat frame, double maxR, double minR, double minX, double maxY);
+vector<RotatedRect> findObject(Mat frame, double maxR, double minR, double minX, double maxX, double minY, double maxY);
 
 Point2f getLeftCenter(Point2f points[4]) {
     Point2f minP[2] = {Point2f(99999, 99999), Point2f(99999, 99999)};;
@@ -28,14 +28,26 @@ Point2f getLeftCenter(Point2f points[4]) {
     return (minP[0] + minP[1]) / 2;
 }
 
+Point2f getRightCenter(Point2f points[4]) {
+    Point2f maxP[2] = {Point2f(0, 0), Point2f(0, 0)};;
+    for (int i = 0; i < 4; ++i) {
+        if (points[i].x > maxP[0].x) {
+            maxP[1] = maxP[0];
+            maxP[0] = points[i];
+        } else if (points[i].x > maxP[1].x)
+            maxP[1] = points[i];
+    }
+    return (maxP[0] + maxP[1]) / 2;
+}
 int main() {
     // declares all required variables
     Mat frame;
     // set input video
-    string path = "/home/peng/下载/数据2/";
-    for (int nameN = 81; nameN < 157; ++nameN) {
+    string path = "/home/peng/下载/4.30/";
+    for (int nameN = 117; nameN < 118; ++nameN) {
         string name = to_string(nameN);
-        VideoCapture cap(path + name + ".MOV");
+        string fileName = path + "data (" + name + ")" + +".MOV";
+        VideoCapture cap(fileName);
         if (!cap.isOpened()) {
             std::cout << "fail to open video!" << std::endl;
             return -1;
@@ -53,14 +65,16 @@ int main() {
             if (frame.rows == 0 || frame.cols == 0)
                 break;
             //ignore unimportant frames
-            if (num > 40) {
+            if (num > 50) {
                 Mat nnframe = get_foreground_object(pBackgroundKnn, frame, 1);
-                vector<RotatedRect> enableRects = findObject(nnframe, 7000, 3000, width * 0.8, height * 0.5);
+                vector<RotatedRect> enableRects = findObject(nnframe, 7000, 3000, 0, width * 0.4, 0, height * 0.5);
                 if (enableRects.empty())
                     continue;
+                Point2f points[4];
+                enableRects[0].points(points);
                 RotatedRect rect = enableRects[0];
                 vector<RotatedRect> rects;
-                VideoCapture cap1(path + name + ".MOV");
+                VideoCapture cap1(fileName);
                 int cap1Num = 0;
                 ofstream ofile;
                 ofile.open(path + "resa/" + name);
@@ -68,8 +82,8 @@ int main() {
                 ofile << num << endl;
                 Point2f ps[4];
                 rect.points(ps);
-                cout << getLeftCenter(ps) << endl;
-                ofile << getLeftCenter(ps) << endl;
+                cout << rect.boundingRect() << endl;
+                ofile << getRightCenter(ps) << endl;
 
                 int empty = 0;
                 int success = 0;
@@ -109,8 +123,8 @@ int main() {
                         for (int j = 0; j < 4; ++j) {
                             line(frame, points[j], points[(j + 1) % 4], Scalar(0, 0, 255), 3, 8);
                         }
-                        cout << getLeftCenter(points) << endl;
-                        ofile << getLeftCenter(points) << endl;
+                        cout << getRightCenter(points) << endl;
+                        ofile << getRightCenter(points) << endl;
                         // show image with the tracked object
                         imshow("tracker", frame);
                     } else {
@@ -120,11 +134,11 @@ int main() {
                         }
                     }
                     //quit on ESC button
-                    //if (waitKey(1) == 27)break;
+                    if (waitKey(1) == 27)break;
                 }
                 cap1.release();
                 ofile.close();
-                if (success>50)
+                if (success > 50)
                     break;
             }
         }
@@ -161,8 +175,9 @@ vector<RotatedRect> trackingObject(Mat frame, RotatedRect rect, double maxD, dou
     for (size_t i = 0; i < region_contours.size(); ++i) {
         RotatedRect newRect = minAreaRect(region_contours[i]);
         double distant = sqrt(pow(rect.center.x - newRect.center.x, 2) + pow(rect.center.y - newRect.center.y, 2));
+        //atention:ball go to right
         if (distant < maxD && newRect.size.area() < maxR &&
-            newRect.size.area() > minR && newRect.center.x < rect.center.x) {
+            newRect.size.area() > minR && newRect.center.x > rect.center.x) {
             objects.push_back(newRect);
         }
 
@@ -170,7 +185,8 @@ vector<RotatedRect> trackingObject(Mat frame, RotatedRect rect, double maxD, dou
     return objects;
 }
 
-vector<RotatedRect> findObject(Mat frame, double maxR, double minR, double minX, double maxY) {
+vector<RotatedRect>
+findObject(Mat frame, double maxR, double minR, double minX, double maxX, double minY, double maxY) {
     std::vector<std::vector<Point>> region_contours;
     findContours(frame, region_contours, CV_RETR_EXTERNAL,
                  CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
@@ -178,7 +194,8 @@ vector<RotatedRect> findObject(Mat frame, double maxR, double minR, double minX,
     for (size_t i = 0; i < region_contours.size(); ++i) {
         RotatedRect newRect = minAreaRect(region_contours[i]);
         if (newRect.size.area() < maxR && newRect.size.area() > minR
-            && newRect.center.x > minX && newRect.center.y < maxY) {
+            && newRect.center.x > minX && newRect.center.x < maxX && newRect.center.y > minY &&
+            newRect.center.y < maxY) {
             objects.push_back(newRect);
         }
     }

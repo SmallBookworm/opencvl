@@ -11,7 +11,6 @@ using namespace cv;
 
 Tracker::Tracker() {
     this->frameI = 0;
-    ringWatcher.ring[0] = -1;
     reboundTest = false;
 }
 
@@ -33,6 +32,7 @@ Mat Tracker::leastSquares(cv::Mat inMat, cv::Mat outMat) {
 
 }
 
+//1,x,x^2,x^3...
 std::vector<float> Tracker::curveFitting(std::vector<float> x, std::vector<float> y, int dimension) {
     int size = static_cast<int>(x.size());
     Mat inMat(size, dimension + 1, CV_32FC1), outMat(size, 1, CV_32FC1);
@@ -82,7 +82,7 @@ vector<vector<Point>> Tracker::findAllContours(Mat &input, bool isDepth) {
 //    imshow("GaussianBlur", frame);
 
     Canny(frame, frame, 30, 60, 3);
-    imshow("Canny", frame);
+    //imshow("Canny", frame);
 
     vector<vector<Point>> contours;
     std::vector<Vec4i> hierarchy;
@@ -134,15 +134,35 @@ std::vector<RotatedRect> Tracker::getRotatedRect(std::vector<std::vector<Point>>
     return objects;
 }
 
-Vec4f Tracker::getEdgeCircle(std::vector<Point> contour) {
+Vec4f Tracker::getEdgeCircle(cv::Mat &foreground, std::vector<Point> contour) {
     Vec4f circle;
     Point2f center;
     float radius = 0;
-    minEnclosingCircle(contour, center, radius);
+    Moments mu = moments(contour, false);
+    center = Point2f(mu.m10 / mu.m00, mu.m01 / mu.m00);
+    radius = static_cast<float>(sqrt(contourArea(contour) / M_PI));
     circle[0] = center.x;
     circle[1] = center.y;
     circle[2] = radius;
-    circle[3] = static_cast<float>(contourArea(contour) / (M_PI * radius * radius));
+
+    float result = 0;
+    int count = 0;
+    float a = circle[2];
+    if ((circle[0] + circle[2]) >= foreground.cols || (circle[1] + circle[2]) >= foreground.rows ||
+        (circle[0] - circle[2]) < 0 || (circle[1] - circle[2]) < 0)
+        return -1;
+    for (int i = static_cast<int>(ceil(circle[1] - a)); i < circle[1] + a; ++i) {
+        double squareX = pow(a, 2) - pow(i - circle[1], 2);
+        int maxX = static_cast<int>(sqrt(squareX) + circle[0]);
+        int minX = static_cast<int>(ceil(circle[0] - sqrt(squareX)));
+        for (int j = minX; j < maxX; ++j) {
+            uchar value = foreground.at<uchar>(i, j);
+            if (value > 0)
+                result++;
+            count++;
+        }
+    }
+    circle[3] = result / count;
     return circle;
 }
 
@@ -192,15 +212,21 @@ Rect Tracker::selectROIDepth(std::string windowName, cv::Mat &depthMat) {
 }
 
 cv::Vec4f
-Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage, rs2::depth_frame depthFrame) {
+Tracker::getBall(cv::Mat &foreground, std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
+                 rs2::depth_frame depthFrame) {
     bool minI = false;
     Vec4f minC;
     Vec3f realC;
     float cDepth;
     float cSize;
     float minSizes, maxsizes, minX, minY, maxX, maxY, minDi, maxDi, minZ, maxZ, minP, minR, maxR;
-    minSizes = 10;
-    maxsizes = 100;
+    minSizes = 20;
+    maxsizes = 70;
+
+    minR = 0.07;
+    maxR = 0.2;
+
+    minP = 0.8;
     if (this->realCoordinates.empty()) {
         //initial region
         maxY = resultImage.rows;
@@ -208,18 +234,8 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
         maxX = resultImage.cols * 2 / 3;
         minX = resultImage.cols / 3;
         minZ = 1.000;
-        maxZ = 5.000;
-
-        minR = 0.1;
-        maxR = 0.5;
-
-        minP = 0.4;
+        maxZ = ringWatcher.coordinate[2];
     } else {
-        minR = 0.1;
-        maxR = 0.5;
-
-        minP = 0.4;
-
         Vec3f info = this->ballInfo.back();
         Vec3f realCI = this->realCoordinates.back();
         //speed 50
@@ -235,7 +251,6 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
         minZ = realCI[2] + 1.00 * (this->frameI - info[0]) - 1;
 
         minSizes = static_cast<float>(info[1] / (2 * (this->frameI - info[0])));
-        Vec4f before = this->ballCoordinates.back();
     }
     for (auto &contour : contours) {
         //1 point's number
@@ -243,7 +258,7 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
         if (contour.size() < minSizes || contour.size() > maxsizes)
             continue;
 
-        Vec4f circle = this->getEdgeCircle(contour);
+        Vec4f circle = this->getEdgeCircle(foreground, contour);
         //2 grade of circle
         if (circle[3] < minP)
             continue;
@@ -320,11 +335,10 @@ Tracker::getBall(std::vector<std::vector<cv::Point>> contours, Mat &resultImage,
 
 int Tracker::passCF(cv::Mat &frame) {
     unsigned long size = this->ballInfo.size();
-    //when size is 2,fit line.
-    if (size == 2) {
+    if (size >= 2) {
         //ball coordinates in ring's plane (x,y,z)
         Vec3f point;
-        point[2] = ringWatcher.coordinate[2];
+        //point[2] = ringWatcher.coordinate[2];
         //x
         vector<float> xs, ys;
         for (int i = 0; i < size; ++i) {
@@ -334,67 +348,39 @@ int Tracker::passCF(cv::Mat &frame) {
             ys.push_back(this->realCoordinates[i][2]);
         }
         vector<float> func1 = this->curveFitting(xs, ys, 1);
-        point[0] = (point[2] - func1[0]) / func1[1];
-        //y
+        //point[0] = (point[2] - func1[0]) / func1[1];
+        point[0] = static_cast<float>((ringWatcher.func[0] - func1[0]) / (func1[1] - ringWatcher.func[1]));
+        point[2] = func1[0] + point[0] * func1[1];
         xs.clear();
         ys.clear();
-        for (int i = 0; i < size; ++i) {
+        //when size is 2,fit line
+        if (size == 2) {
+            for (int i = 0; i < size; ++i) {
+                //y
+                xs.push_back(this->realCoordinates[i][1]);
+                //z
+                ys.push_back(this->realCoordinates[i][2]);
+            }
+            vector<float> func2 = this->curveFitting(xs, ys, 1);
+            point[1] = (point[2] - func2[0]) / func2[1];
+        } else {
             //y
-            xs.push_back(this->realCoordinates[i][1]);
-            //z
-            ys.push_back(this->realCoordinates[i][2]);
+            float b = func1[1];
+            //1/sin(a)
+            double bc = sqrt(pow(1 / b, 2) + 1);
+            for (int j = 0; j < size; ++j) {
+                xs.push_back(static_cast<float &&>(this->realCoordinates[j][2] * bc));
+                ys.push_back(this->realCoordinates[j][1]);
+            }
+            Vec3f func2 = this->x2curveFitting(xs, ys);
+            point[1] = static_cast<float>(func2[0] + func2[1] * point[2] * bc + func2[2] * pow(point[2] * bc, 2));
         }
-        vector<float> func2 = this->curveFitting(xs, ys, 1);
-        point[1] = (point[2] - func2[0]) / func2[1];
 
         double dis = this->realDistance(ringWatcher.coordinate, point);
-        //d-value
+        //cout << "bp:" << point <<"  dis:"<<dis<< endl;
+        //d-value( right hand coordinate system)
         Vec3f dv = point - ringWatcher.coordinate;
-        this->dValue.x = -dv[0];
-        this->dValue.y = dv[1];
-
-        float br = this->ballCoordinates.back()[2];
-        float bdepth = this->ballInfo.back()[2];
-        //Of course,ball's radius don't change when coordinate system is changed.
-        // Horizontal FOV (HD 16:9): 64; Vertical FOV (HD 16:9): 41
-        double realR = br / (frame.cols / 2) * bdepth * tan(HANGLE / 2);
-        if (realR + dis < ringWatcher.r)
-            return 1;
-        else if (dis < ringWatcher.r)
-            return 3;
-        else
-            return 2;
-    } else if (size > 2) {
-        //ball coordinates in ring's plane (x,y,z)
-        Vec3f point;
-        point[2] = ringWatcher.coordinate[2];
-        //x
-        vector<float> xs, ys;
-        for (int i = 0; i < size; ++i) {
-            //x
-            xs.push_back(this->realCoordinates[i][0]);
-            //z
-            ys.push_back(this->realCoordinates[i][2]);
-        }
-        vector<float> func1 = this->curveFitting(xs, ys, 1);
-        point[0] = (point[2] - func1[0]) / func1[1];
-        //y
-        float b = func1[1];
-        //1/sin(a)
-        double bc = sqrt(pow(1 / b, 2) + 1);
-        xs.clear();
-        ys.clear();
-        for (int j = 0; j < size; ++j) {
-            xs.push_back(static_cast<float &&>(this->realCoordinates[j][2] * bc));
-            ys.push_back(this->realCoordinates[j][1]);
-        }
-        Vec3f func2 = this->x2curveFitting(xs, ys);
-        point[1] = static_cast<float>(func2[0] + func2[1] * point[2] * bc + func2[2] * pow(point[2] * bc, 2));
-
-        double dis = this->realDistance(ringWatcher.coordinate, point);
-        //d-value
-        Vec3f dv = point - ringWatcher.coordinate;
-        this->dValue.x = -dv[0];
+        this->dValue.x = dv[0];
         this->dValue.y = dv[1];
 
         float br = this->ballCoordinates.back()[2];
@@ -416,16 +402,16 @@ int Tracker::passCF(cv::Mat &frame) {
 }
 
 int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
-    Mat forground = frame.clone();
-    vector<vector<Point>> contours = this->findForegroundContours(forground, 1);
+    Mat foreground = frame.clone();
+    vector<vector<Point>> contours = this->findForegroundContours(foreground, 1);
     //test
     //imshow("MORPH_CLOSE", forground);
     if (frameI < 30)
-        imwrite("/home/peng/文档/test/f" + to_string(frameI) + ".jpg", forground);
+        imwrite("/home/peng/文档/test/f" + to_string(frameI) + ".jpg", foreground);
     //debouncing
-    double sum = forground.cols * forground.rows;
-    cout << "s:" << (pSum(forground) / sum) << endl;
-    if ((pSum(forground) / sum) > 0.05)
+    double sum = foreground.cols * foreground.rows;
+    cout << "s:" << (pSum(foreground) / sum) << endl;
+    if ((pSum(foreground) / sum) > 0.05)
         return -1;
 //test ring-wather
 //    Mat clo = frame.clone();
@@ -433,7 +419,7 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
 //    imshow("fuck?", clo);
 
     Mat result = frame.clone();
-    Vec4f circle = getBall(contours, result, depthFrame);
+    Vec4f circle = getBall(foreground, contours, result, depthFrame);
     // get result or restart when no ball in 5 frames
     if (circle[0] < 0) {
         int res = -1;
@@ -459,51 +445,38 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     return 0;
 }
 
-cv::Vec4f Tracker::getReBall(std::vector<std::vector<cv::Point>> contours, cv::Mat &resultImage,
+cv::Vec4f Tracker::getReBall(cv::Mat &foreground, std::vector<std::vector<cv::Point>> contours, cv::Mat &resultImage,
                              rs2::depth_frame depthFrame) {
     bool minI = false;
     Vec4f minC;
     Vec3f realC;
     float cDepth;
     float cSize;
-    float minSizes, maxsizes, minX, minY, maxX, maxY, minDi, maxDi, minZ, maxZ, minP, minR, maxR;
+    float minSizes, maxsizes, minX, minY, maxX, maxY, minDi, maxDi, minP, minR, maxR;
     minSizes = 20;
-    maxsizes = 60;
-    if (this->realCoordinates.empty()) {
+    maxsizes = 70;
+
+    minR = 0.07;
+    maxR = 0.2;
+
+    minP = 0.8;
+    if (this->reBall.empty()) {
         //initial region
-        maxY = resultImage.rows;
-        minY = 0;
-        maxX = resultImage.cols * 2 / 3;
-        minX = resultImage.cols / 3;
-        minZ = 1.000;
-        maxZ = 5.000;
-
-        minR = 0.1;
-        maxR = 0.5;
-
-        minP = 0.6;
+        maxY = resultImage.rows * 0;
+        minY = resultImage.rows * 0.5;
+        maxX = resultImage.cols * 0.75;
+        minX = resultImage.cols * 0.25;
+        //prevent shaking ring
+        maxDi = 2;
+        minDi = 0.5;
     } else {
-        minR = 0.1;
-        maxR = 0.5;
-
-        minP = 0.6;
-
-        Vec3f info = this->ballInfo.back();
-        Vec3f realCI = this->realCoordinates.back();
-        //speed 50
-//        maxX = before[0] + 100 * (this->frameI - info[0]);
-//        minX = before[0];
-//        maxY = before[1] + 50 * (this->frameI - info[0]);
-//        minY = before[1] - 50 * (this->frameI - info[0]);
+        Vec3f info = this->reBallInfo.back();
+        Vec3f realCI = this->reRealCoordinates.back();
 
         maxDi = 2 * (this->frameI - info[0]);
         minDi = 0;
-        //make sure that ball goes far away.
-        maxZ = realCI[2] + 1.00 * (this->frameI - info[0]) + 1;
-        minZ = realCI[2] + 1.00 * (this->frameI - info[0]) - 1;
 
-        minSizes = static_cast<float>(info[1] / (2 * (this->frameI - info[0])));
-        Vec4f before = this->ballCoordinates.back();
+        minSizes = info[1] / (2 * (this->frameI - info[0]));
     }
     for (auto &contour : contours) {
         //1 point's number
@@ -511,7 +484,7 @@ cv::Vec4f Tracker::getReBall(std::vector<std::vector<cv::Point>> contours, cv::M
         if (contour.size() < minSizes || contour.size() > maxsizes)
             continue;
 
-        Vec4f circle = this->getEdgeCircle(contour);
+        Vec4f circle = this->getEdgeCircle(foreground, contour);
         //2 grade of circle
         if (circle[3] < minP)
             continue;
@@ -537,18 +510,17 @@ cv::Vec4f Tracker::getReBall(std::vector<std::vector<cv::Point>> contours, cv::M
         //test
         cout << coor << endl;
         //judge zone when empty.if not,distance.
-        if (this->ballInfo.empty()) {
-            //4 initial region
-            if (coor[2] > maxZ || coor[2] < minZ)
-                continue;
+        if (this->reBallInfo.empty()) {
             if (circle[0] > maxX || circle[0] < minX)
                 continue;
             if (circle[1] > maxY || circle[1] < minY)
                 continue;
-        } else {
-            if (coor[2] > maxZ || coor[2] < minZ)
-                continue;
             double dis = this->realDistance(coor, this->realCoordinates.back());
+            cout << "distance:" << dis << endl;
+            if (dis > maxDi || dis < minDi)
+                continue;
+        } else {
+            double dis = this->realDistance(coor, this->reRealCoordinates.back());
             cout << "distance:" << dis << endl;
             if (dis > maxDi || dis < minDi)
                 continue;
@@ -561,7 +533,7 @@ cv::Vec4f Tracker::getReBall(std::vector<std::vector<cv::Point>> contours, cv::M
             cDepth = depth;
             realC = coor;
             minI = true;
-        } else if (circle[3] < minC[3]) {
+        } else if (circle[3] > minC[3]) {
             minC = circle;
             cSize = contour.size();
             cDepth = depth;
@@ -572,27 +544,28 @@ cv::Vec4f Tracker::getReBall(std::vector<std::vector<cv::Point>> contours, cv::M
         minC[0] = -1;
         return minC;
     }
-    this->ballCoordinates.push_back(minC);
-    this->ballInfo.emplace_back(this->frameI, cSize, cDepth);
-    this->realCoordinates.push_back(realC);
+    this->reBall.push_back(minC);
+    this->reBallInfo.emplace_back(this->frameI, cSize, cDepth);
+    this->reRealCoordinates.push_back(realC);
     //test
     Point center(round(minC[0]), round(minC[1]));
     int radius = round(minC[2]);
     cv::circle(resultImage, center, radius, Scalar(0, 255, 0), 1);
     cerr << minC << endl;
-    cerr << this->ballInfo.back() << endl;
+    cerr << this->reBallInfo.back() << endl;
     cerr << realC << endl;
     return minC;
 }
 
 int Tracker::surePassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
-    vector<vector<Point>> contours = this->findForegroundContours(frame, 1);
+    Mat foreground = frame.clone();
+    vector<vector<Point>> contours = this->findForegroundContours(foreground, 1);
     Mat result = frame.clone();
-    Vec4f circle = getReBall(contours, result, depthFrame);
+    Vec4f circle = getReBall(foreground, contours, result, depthFrame);
     //test
-    namedWindow("ball", WINDOW_AUTOSIZE);
+    //namedWindow("ball", WINDOW_AUTOSIZE);
     //resizeWindow("ball", 848, 480);
-    imshow("ball", result);
+    //imshow("ball", result);
     //usleep(100000);
 
     //judge result when ball passed 5 frames
@@ -602,12 +575,10 @@ int Tracker::surePassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
             return 1;
         } else {
             float dDep = 0;
-            dDep = this->realCoordinates.back()[2] - this->reBall.front()[2];
-            for (int i = 1; i < this->reBall.size(); ++i) {
-                if (dDep < 0) {
-                    this->clearInfo();
-                    return 1;
-                }
+            dDep = this->realCoordinates.back()[2] - this->reRealCoordinates.front()[2];
+            if (dDep < 0) {
+                this->clearInfo();
+                return 1;
             }
             //fail when  ball closes in 5 frames
             this->clearInfo();
@@ -627,86 +598,11 @@ void Tracker::clearInfo() {
     this->ballCoordinates.clear();
     this->realCoordinates.clear();
     this->reBall.clear();
+    this->reRealCoordinates.clear();
     this->reBallInfo.clear();
 }
 
 int Tracker::test() {
-//    // Declare depth colorizer for pretty visualization of depth data
-//    rs2::colorizer color_map;
-//
-//    // Declare RealSense pipeline, encapsulating the actual device and sensors
-//    rs2::pipeline pipe;
-//    //Create a configuration for configuring the pipeline with a non default profile
-//    rs2::config cfg;
-//    //Add desired streams to configuration
-//    cfg.enable_stream(RS2_STREAM_INFRARED, 1280, 720, RS2_FORMAT_Y8, 30);
-//    cfg.enable_stream(RS2_STREAM_DEPTH, 1280, 720, RS2_FORMAT_Z16, 30);
-//    //cfg.enable_stream(RS2_STREAM_COLOR, 848, 480, RS2_FORMAT_BGR8, 30);
-//    // Start streaming with default recommended configuration
-//    pipe.start(cfg);
-//
-//    const auto window_name = "Display Image";
-//    namedWindow(window_name, WINDOW_AUTOSIZE);
-//    bool contFlag = true;
-//    while (contFlag) {
-//        rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
-//        rs2::depth_frame depthFrame = data.get_depth_frame();
-//        Mat depthMat = depth_frame_to_meters(pipe, depthFrame);
-//        inRange(depthMat, 5.5, 6.3, depthMat);
-//        ++this->frameI;
-//        cout << "frame:" << this->frameI << endl;
-//        //compute result
-//        // Update the window with new data
-//        imshow(window_name, depthMat);
-//        contFlag = waitKey(1) < 0;
-//    }
-//
-//    return EXIT_SUCCESS;
-    ringWatcher.ring = Vec4f(384, 103, 60, 5.334);
-    ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
-                                                       848, 480);
-    //calculate radius ,it is wrong when camera doesn't look at the front horizontally.In fact,it is known.
-    ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / (848 / 2) *
-                                       ringWatcher.ring[3] *
-                                       tan(HANGLE / 2));
-    cout << "r:" << ringWatcher.r << endl;
-    cout << "coor" << ringWatcher.coordinate << endl;
-
-    Vec3f point;
-    point[2] = 5.334;
-    vector<float> xs, ys;
-    //x
-    xs.push_back(0.63);
-    xs.push_back(0.73);
-    //z
-    ys.push_back(4.26);
-    ys.push_back(5.4);
-
-    vector<float> func1 = this->curveFitting(xs, ys, 1);
-    point[0] = (point[2] - func1[0]) / func1[1];
-    cout << point[0] << endl;
-    float b = func1[1];
-    //1/sin(a)
-    double bc = sqrt(pow(1 / b, 2) + 1);
-    cout << bc << endl;
-    xs.clear();
-    ys.clear();
-    xs.push_back(static_cast<float &&>(1));
-    ys.push_back(2);
-
-    xs.push_back(static_cast<float &&>(0));
-    ys.push_back(1);
-    xs.push_back(static_cast<float &&>(2));
-    ys.push_back(4);
-    Vec3f func2 = this->x2curveFitting(xs, ys);
-    cout << func2 << endl;
-    point[1] = static_cast<float>(func2[0] + func2[1] * point[2] * bc + func2[2] * pow(point[2] * bc, 2));
-    cout << point[1] << endl;
-    double dis = this->realDistance(ringWatcher.coordinate, point);
-    //d-value
-    Vec3f dv = point - ringWatcher.coordinate;
-    this->dValue.x = -dv[0];
-    this->dValue.y = dv[1];
 }
 
 
@@ -731,10 +627,11 @@ int Tracker::operator()(DeviationPosition &position) try {
     while (!status) {
         status = position.getStop();
         if (position.getStby()) {
-            if (this->frameI != 0){
+            if (this->frameI != 0) {
                 this->frameI = 0;
                 clearInfo();
             }
+            //standby
             continue;
         }
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
@@ -750,24 +647,34 @@ int Tracker::operator()(DeviationPosition &position) try {
         Mat image = frame_to_mat(aligned_set.get_color_frame());
 
         //get ring data
-        if (ringWatcher.ring[0] < 0 && this->frameI > 0) {
+        if (ringWatcher.r < 0 && this->frameI > 0) {
 //        Mat ringR = image.clone();
 //        imshow("ring", ringR);
 //        Rect rect = this->selectROIDepth("ring", ringR);
 //        cout << "rdepth:" << depthFrame.get_distance(rect.tl().x, rect.tl().y) << endl;
 
-            ringWatcher.ring = Vec4f(348, 326, 60, 4.469);
-            ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
-                                                               depthFrame.get_width(), depthFrame.get_height());
+//            ringWatcher.ring = Vec4f(328, 335, 60, 4.069);
+//            ringWatcher.coordinate = this->getCircleCoordinate(ringWatcher.ring, Vec3f(0, 0, ringWatcher.ring[3]),
+//                                                               depthFrame.get_width(), depthFrame.get_height());
             //calculate radius ,it is wrong when camera doesn't look at the front horizontally.In fact,it is known.
-            ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / (depthFrame.get_width() / 2) *
-                                               ringWatcher.ring[3] *
-                                               tan(HANGLE / 2));
-
-            cout << "r:" << ringWatcher.r << endl;
-            cout << "coor" << ringWatcher.coordinate << endl;
-            //ringWatcher.r = 0.4;
-            //ringWatcher.coordinate=Vec3f(-0.3,2.7,3.5);
+//            ringWatcher.r = static_cast<float>(ringWatcher.ring[2] / (depthFrame.get_width() / 2) *
+//                                               ringWatcher.ring[3] *
+//                                               tan(HANGLE / 2));
+//
+//            cout << "r:" << ringWatcher.r << endl;
+//            cout << "coor" << ringWatcher.coordinate << endl;
+            ringWatcher.r = 0.4;
+            Vec4f coor = position.getRing();
+            ringWatcher.coordinate = Vec3f(coor[0], coor[1], coor[2]);
+            if (coor[3] < (M_PI / 2) && coor[3] > 0) {
+                ringWatcher.func[1] = -tan(M_PI / 2 - coor[3]);
+                ringWatcher.func[0] = coor[2] - ringWatcher.func[1] * coor[0];
+            } else {
+                ringWatcher.func[0] = coor[2];
+                ringWatcher.func[1] = 0;
+            }
+            cout << "rwc:" << ringWatcher.coordinate << endl;
+            cout << "rfc:" << ringWatcher.func[0] << "  " << ringWatcher.func[1] << endl;
         }
 
         //compute result

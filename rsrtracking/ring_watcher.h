@@ -15,8 +15,13 @@ public:
     //real x,y,z
     cv::Vec3f coordinate;
     float r;
-
+    //plane
+    double func[2];
+RingWatcher(){
+    this->r=-1;
+}
     int getRing(cv::Mat &result);
+
     cv::Vec3b getColor(cv::Mat &res);
 
 private:

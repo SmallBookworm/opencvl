@@ -11,7 +11,7 @@ int main() {
     // create a tracker object
     Ptr<Tracker> tracker = TrackerTLD::create();
     // set input video
-    VideoCapture cap("/home/peng/下载/机器学习视频/IMG_2382.MOV");
+    VideoCapture cap("/home/peng/下载/4.30/data (1).MOV");
     if (!cap.isOpened()) {
         std::cout << "fail to open video!" << std::endl;
         return -1;
@@ -25,7 +25,7 @@ int main() {
         if (frame.rows == 0 || frame.cols == 0)
             break;
         //ignore unimportant frames
-        if (num>100){
+        if (num>40){
             namedWindow("tracker", CV_WINDOW_NORMAL);
             resizeWindow("tracker", 1080, 720);
             imshow("tracker", frame);

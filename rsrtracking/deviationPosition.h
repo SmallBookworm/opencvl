@@ -22,8 +22,8 @@ private:
     bool standby;
     std::mutex stby_mutex;
 private:
-    //real x,y,z
-    cv::Vec3f ring;
+    //real x,y,z,angle
+    cv::Vec4f ring;
     std::mutex ring_mutex;
 public:
     explicit DeviationPosition() {
@@ -33,7 +33,7 @@ public:
         standby = true;
     }
 
-    void init(cv::Vec3f in);
+    void init(cv::Vec4f in);
 
     void await();
 
@@ -50,9 +50,9 @@ public:
 
     bool getStby();
 
-    cv::Vec3f getRing();
+    cv::Vec4f getRing();
 
-    void setRing(cv::Vec3f in);
+    void setRing(cv::Vec4f in);
 };
 
 

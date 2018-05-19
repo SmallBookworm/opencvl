@@ -5,7 +5,7 @@
 #ifndef DEPTHTRACK_BALL_TRACKER_H
 #define DEPTHTRACK_BALL_TRACKER_H
 
-#define SENSEANGLE (45.0 / 180 * M_PI)
+#define SENSEANGLE (39.0 / 180 * M_PI)
 #define HANGLE (64.0 / 180 * M_PI)
 #define VANGLE (41.0 / 180 * M_PI)
 
@@ -35,10 +35,14 @@ private:
     std::vector<cv::Vec3f> realCoordinates;
     //frame,points size,depth,
     std::vector<cv::Vec3f> ballInfo;
-    //x,y,z,r
+
+    //x,y,r,score
     std::vector<cv::Vec4f> reBall;
+    //x,y,z
+    std::vector<cv::Vec3f> reRealCoordinates;
     //frame,points size,depth,
     std::vector<cv::Vec3f> reBallInfo;
+
     RingWatcher ringWatcher;
     cv::Point2f dValue;
     bool reboundTest;
@@ -74,15 +78,17 @@ private:
 
     int pSum(cv::Mat gray);
 
-    cv::Vec4f getEdgeCircle(std::vector<cv::Point> contour);
+    cv::Vec4f getEdgeCircle(cv::Mat &foreground, std::vector<cv::Point> contour);
 
     cv::Vec3f getCircleCoordinate(cv::Vec4f circle, cv::Vec3f info, int wWidth, int wHeight);
 
     std::vector<cv::RotatedRect> getRotatedRect(std::vector<std::vector<cv::Point>>);
 
-    cv::Vec4f getBall(std::vector<std::vector<cv::Point>> contours, cv::Mat &result, rs2::depth_frame depthFrame);
+    cv::Vec4f getBall(cv::Mat &foreground, std::vector<std::vector<cv::Point>> contours, cv::Mat &result,
+                      rs2::depth_frame depthFrame);
 
-    cv::Vec4f getReBall(std::vector<std::vector<cv::Point>> contours, cv::Mat &result, rs2::depth_frame depthFrame);
+    cv::Vec4f getReBall(cv::Mat &foreground, std::vector<std::vector<cv::Point>> contours, cv::Mat &result,
+                        rs2::depth_frame depthFrame);
 
     void clearInfo();
 

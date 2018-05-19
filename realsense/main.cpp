@@ -18,19 +18,30 @@ int thr() try {
     //Create a configuration for configuring the pipeline with a non default profile
     rs2::config cfg;
     //Add desired streams to configuration
-    cfg.enable_stream(RS2_STREAM_INFRARED, 848, 480, RS2_FORMAT_Y8, 90);
-    cfg.enable_stream(RS2_STREAM_DEPTH, 848, 480, RS2_FORMAT_Z16, 90);
-    cfg.enable_stream(RS2_STREAM_COLOR, 848, 480, RS2_FORMAT_BGR8, 60);
+    cfg.enable_stream(RS2_STREAM_INFRARED, 640, 480, RS2_FORMAT_Y8, 30);
+    cfg.enable_stream(RS2_STREAM_DEPTH, 640, 480, RS2_FORMAT_Z16, 30);
+    cfg.enable_stream(RS2_STREAM_COLOR, 640, 480, RS2_FORMAT_BGR8, 30);
     // Start streaming with default recommended configuration
     pipe.start(cfg);
 
-    const auto window_name = "Display Image";
-    namedWindow(window_name, WINDOW_AUTOSIZE);
+//    const auto window_name = "Display Image";
+//    namedWindow(window_name, WINDOW_AUTOSIZE);
     bool contFlag = true;
-    string name = "0";
-   // VideoWriter vDepth("/home/peng/下载/realse/depth" + name+ ".avi", CV_FOURCC('M', 'J', 'P', 'G'), 60, Size(848, 480), false);
-  //  VideoWriter vIr("/home/peng/下载/realse/ir" + name+ ".avi", CV_FOURCC('M', 'J', 'P', 'G'), 60, Size(848, 480), false);
-//    VideoWriter vColor("/home/peng/下载/realse/color" + name+ ".avi", CV_FOURCC('M', 'J', 'P', 'G'), 60, Size(848, 480), true);
+    string name = "1";
+    VideoWriter vDepth("/home/peng/depth" + name + ".avi", CV_FOURCC('M', 'J', 'P', 'G'), 30,
+                       Size(640, 480),
+                       true);
+    VideoWriter vIr("/home/peng/ir" + name + ".avi", CV_FOURCC('M', 'J', 'P', 'G'), 30, Size(640, 480),
+                    false);
+    VideoWriter vColor("/home/peng/color" + name + ".avi", CV_FOURCC('M', 'J', 'P', 'G'), 30, Size(640, 480),
+                       true);
+
+    VideoCapture capture0(0);
+    VideoWriter cap0("/home/peng/cap0" + name + ".avi", CV_FOURCC('M', 'J', 'P', 'G'), 30, Size(640, 480),
+                     true);
+//    VideoCapture capture1(1);
+//    VideoWriter cap1("/home/leon/Downloads/cap1" + name + ".avi", CV_FOURCC('M', 'J', 'P', 'G'), 30, Size(640, 480),
+//                     true);
     while (contFlag) {
         rs2::frameset data = pipe.wait_for_frames(); // Wait for next set of frames from the camera
         rs2::depth_frame depthFrame = data.get_depth_frame();
@@ -40,13 +51,24 @@ int thr() try {
         Mat imaged = frame_to_mat(depth);
         Mat imagec = frame_to_mat(color);
         Mat imagei = frame_to_mat(ir);
-//        vDepth << imaged;
-//        vIr << imagei;
-//        vColor << imagec;
+        vDepth << imaged;
+        vIr << imagei;
+        vColor << imagec;
+        if (capture0.isOpened()) {
+            Mat mat;
+            //imshow("fg",mat);
+            capture0 >> mat;
+            cap0 << mat;
+        }
+//        if (capture1.isOpened()) {
+//            Mat mat;
+//            capture1 >> mat;
+//            cap1 << mat;
+//        }
         // Update the window with new data
-        imshow(window_name, imaged);
+//        imshow(window_name, imaged);
         imshow("color", imagec);
-        imshow("imagei", imagei);
+//        imshow("imagei", imagei);
         //Mat fuck(Size(w, h), CV_16SC1, (void*)depth.get_data(), Mat::AUTO_STEP);
         //imshow("fuck",fuck);
         contFlag = waitKey(1) < 0;
