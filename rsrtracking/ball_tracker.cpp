@@ -201,7 +201,7 @@ float Tracker::getCircleDepth(cv::Vec4f circle, rs2::depth_frame depthFrame) {
             count++;
         }
     }
-    return result / count;
+    return result / count + 0.03;
 }
 
 
@@ -265,7 +265,7 @@ Tracker::getBall(cv::Mat &foreground, std::vector<std::vector<cv::Point>> contou
         cout << circle << endl;
 
         float depth = this->getCircleDepth(circle, depthFrame);
-        if (isnan(depth) || depth < 0)
+        if (isnan(depth) || depth <= 0)
             continue;
         cout << "depth:" << depth << endl;
 
@@ -411,7 +411,7 @@ int Tracker::isPassed(cv::Mat &frame, rs2::depth_frame depthFrame) {
     //debouncing
     double sum = foreground.cols * foreground.rows;
     cout << "s:" << (pSum(foreground) / sum) << endl;
-    if ((pSum(foreground) / sum) > 0.05)
+    if ((pSum(foreground) / sum) > 0.04)
         return -1;
 //test ring-wather
 //    Mat clo = frame.clone();

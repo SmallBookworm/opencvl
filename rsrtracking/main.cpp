@@ -15,13 +15,14 @@ int main() {
     //tracker.test();
     getchar();
     short x = -3175, y = 4490, angle = 90;
-    Vec4f ring(y - 500, 2400-340, x + 3175, angle / 180.0 * M_PI);
+    //the Global Positioning System's height is  340 mm
+    Vec4f ring(y - 500, 2400 - 310, x + 3175, angle / 180.0 * M_PI);
     //change coordinate system
     float c1 = ring[0], c2 = ring[2];
     ring[0] = static_cast<float>(cos(ring[3]) * c1 - sin(ring[3]) * c2);
     ring[2] = static_cast<float>(cos(ring[3]) * c2 + sin(ring[3]) * c1);
-    //ring relative position
-    ring[2] -= 500;
+    //camera relative position
+    ring[2] -= 0;
     //mm -> m
     ring[0] /= 1000;
     ring[1] /= 1000;
